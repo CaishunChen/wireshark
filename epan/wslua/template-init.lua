@@ -42,7 +42,7 @@ if running_superuser then
     local disabled_lib = {}
     setmetatable(disabled_lib,{ __index = function() error("this package has been disabled") end } );
 
-    dofile = function() error("dofile has been disabled") end
+--    dofile = function() error("dofile has been disabled") end
     loadfile = function() error("loadfile has been disabled") end
     loadlib = function() error("loadlib has been disabled") end
     require = function() error("require has been disabled") end
