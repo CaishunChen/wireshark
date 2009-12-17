@@ -53,6 +53,9 @@ EXTRA_PROGRAMS = wireshark wireshark-qt tshark tfshark capinfos captype editcap 
 	mergecap dftest randpkt text2pcap dumpcap reordercap rawshark \
 	wireshark_cxx echld_test
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = wireshark.pc
+
 #
 # Wireshark configuration files are put in $(pkgdatadir).
 #

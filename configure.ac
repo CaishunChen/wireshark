@@ -2779,6 +2779,7 @@ AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT(
   Makefile
   doxygen.cfg
+  wireshark.pc
   asn1/Makefile
   _CUSTOM_ASN1_AC_OUTPUT_
   asn1/acp133/Makefile

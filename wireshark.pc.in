@@ -1,14 +1,11 @@
-prefix=@CMAKE_INSTALL_PREFIX@
-exec_prefix=${prefix}
-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
-sharedlibdir=${libdir}
-includedir=${prefix}/include/wireshark
-plugindir=@PLUGIN_INSTALL_DIR@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
 
 Name: wireshark
-Description: wireshark network packet dissection library
-Version: @PROJECT_VERSION@
-
-Requires:
-Libs: -L${libdir} -L${sharedlibdir} -lwireshark
-Cflags: -I${includedir}
+Description: Network Traffic Analyzer
+Version: @PACKAGE_VERSION@
+Requires: glib-2.0 gmodule-2.0
+Libs: -L@libdir@ -lwireshark -lwiretap
+Cflags: -DWS_VAR_IMPORT=extern -DHAVE_STDARG_H -DWS_MSVC_NORETURN= -I@includedir@/wireshark -I@includedir@/wireshark/epan
