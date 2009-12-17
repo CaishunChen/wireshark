@@ -50,6 +50,9 @@ bin_PROGRAMS = \
 EXTRA_PROGRAMS = wireshark tshark capinfos editcap mergecap dftest \
 	randpkt text2pcap dumpcap reordercap rawshark wireshark_cxx
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = wireshark.pc
+
 #
 # Wireshark configuration files are put in $(pkgdatadir).
 #
