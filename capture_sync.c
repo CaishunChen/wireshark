@@ -356,6 +356,7 @@ sync_pipe_start(capture_options *capture_opts) {
     gchar *signal_pipe_name;
 #else
     char errmsg[1024+1];
+    const char *securitymsg = "";
     int sync_pipe[2];                       /* pipe used to send messages from child to parent */
     enum PIPES { PIPE_READ, PIPE_WRITE };   /* Constants 0 and 1 for PIPE_READ and PIPE_WRITE */
 #endif
@@ -623,8 +624,11 @@ sync_pipe_start(capture_options *capture_opts) {
         dup2(sync_pipe[PIPE_WRITE], 2);
         ws_close(sync_pipe[PIPE_READ]);
         execv(argv[0], (gpointer)argv);
-        g_snprintf(errmsg, sizeof errmsg, "Couldn't run %s in child process: %s",
-                   argv[0], g_strerror(errno));
+        if (errno == EPERM || errno == EACCES)
+ 	      securitymsg = "\nAre you a member of the 'wireshark' group? Try running\n'usermod -a -G wireshark _your_username_' as root.";
+        g_snprintf(errmsg, sizeof errmsg, "Couldn't run %s in child process: %s%s",
+                argv[0], g_strerror(errno), securitymsg);
+
         sync_pipe_errmsg_to_parent(2, errmsg, "");
 
         /* Exit with "_exit()", so that we don't close the connection
@@ -715,6 +719,7 @@ sync_pipe_open_command(const char** argv, int *data_read_fd,
     PROCESS_INFORMATION pi;
 #else
     char errmsg[1024+1];
+    const char *securitymsg = "";
     int sync_pipe[2];                       /* pipe used to send messages from child to parent */
     int data_pipe[2];                       /* pipe used to send data from child to parent */
 #endif
@@ -849,8 +854,10 @@ sync_pipe_open_command(const char** argv, int *data_read_fd,
         ws_close(sync_pipe[PIPE_READ]);
         ws_close(sync_pipe[PIPE_WRITE]);
         execv(argv[0], (gpointer)argv);
-        g_snprintf(errmsg, sizeof errmsg, "Couldn't run %s in child process: %s",
-                   argv[0], g_strerror(errno));
+	if (errno == EPERM || errno == EACCES)
+		securitymsg = "\nAre you a member of the 'wireshark' group? Try running\n'usermod -a -G wireshark _your_username_' as root.";
+        g_snprintf(errmsg, sizeof errmsg, "Couldn't run %s in child process: %s%s",
+                   argv[0], g_strerror(errno), securitymsg);
         sync_pipe_errmsg_to_parent(2, errmsg, "");
 
         /* Exit with "_exit()", so that we don't close the connection
