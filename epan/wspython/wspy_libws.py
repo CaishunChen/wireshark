@@ -35,7 +35,7 @@ def get_libws_libname():
   elif system == "Windows":
     return 'libwireshark.dll'
   else:
-    return 'libwireshark.so'
+    return 'libwireshark.so.2'
 
 def get_libws_handle():
   global __libwireshark
