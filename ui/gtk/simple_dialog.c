@@ -139,17 +139,17 @@ display_simple_dialog(gint type, gint btn_mask, char *message)
   /* Top row: Icon and message text */
   top_hb = ws_gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12, FALSE);
   gtk_container_set_border_width(GTK_CONTAINER(main_vb), 6);
-  gtk_container_add(GTK_CONTAINER(main_vb), top_hb);
+  gtk_box_pack_start(GTK_BOX(main_vb), top_hb, TRUE, TRUE, 0);
   gtk_widget_show(top_hb);
 
   gtk_misc_set_alignment (GTK_MISC (type_pm), 0.5f, 0.0f);
-  gtk_container_add(GTK_CONTAINER(top_hb), type_pm);
+  gtk_box_pack_start(GTK_BOX(top_hb), type_pm, TRUE, TRUE, 0);
   gtk_widget_show(type_pm);
 
   /* column for message and optional check button */
   msg_vb = ws_gtk_box_new(GTK_ORIENTATION_VERTICAL, 6, FALSE);
   gtk_box_set_spacing(GTK_BOX(msg_vb), 24);
-  gtk_container_add(GTK_CONTAINER(top_hb), msg_vb);
+  gtk_box_pack_start(GTK_BOX(top_hb), msg_vb, TRUE, TRUE, 0);
   gtk_widget_show(msg_vb);
 
   /* message */
@@ -162,7 +162,7 @@ display_simple_dialog(gint type, gint btn_mask, char *message)
 
   gtk_label_set_justify(GTK_LABEL(msg_label), GTK_JUSTIFY_FILL);
   gtk_misc_set_alignment (GTK_MISC (type_pm), 0.5f, 0.0f);
-  gtk_container_add(GTK_CONTAINER(msg_vb), msg_label);
+  gtk_box_pack_start(GTK_BOX(msg_vb), msg_label, TRUE, TRUE, 0);
   gtk_label_set_line_wrap(GTK_LABEL(msg_label), TRUE);
   gtk_widget_show(msg_label);
 
@@ -173,7 +173,7 @@ display_simple_dialog(gint type, gint btn_mask, char *message)
 
   /* optional check button */
   ask_cb = gtk_check_button_new_with_label("replace with text...");
-  gtk_container_add(GTK_CONTAINER(msg_vb), ask_cb);
+  gtk_box_pack_start(GTK_BOX(msg_vb), ask_cb, TRUE, TRUE, 0);
   g_object_set_data(G_OBJECT(win), CHECK_BUTTON, ask_cb);
 
   /* Button row */
@@ -207,7 +207,7 @@ display_simple_dialog(gint type, gint btn_mask, char *message)
     bbox = NULL;
     break;
   }
-  gtk_container_add(GTK_CONTAINER(main_vb), bbox);
+  gtk_box_pack_start(GTK_BOX(main_vb), bbox, TRUE, TRUE, 0);
   gtk_widget_show(bbox);
 
   ok_bt = g_object_get_data(G_OBJECT(bbox), GTK_STOCK_OK);

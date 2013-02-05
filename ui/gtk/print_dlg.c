@@ -792,7 +792,7 @@ open_print_dialog(const char *title, output_action_e action, print_args_t *args)
 
   /* Button row */
   bbox = dlg_button_row_new(action == output_action_print ? GTK_STOCK_PRINT : GTK_STOCK_OK, GTK_STOCK_CANCEL, GTK_STOCK_HELP, NULL);
-  gtk_box_pack_start(GTK_BOX(main_vb), bbox, FALSE, FALSE, 0);
+  gtk_box_pack_end(GTK_BOX(main_vb), bbox, FALSE, FALSE, 0);
   gtk_widget_show(bbox);
 
   ok_bt = g_object_get_data(G_OBJECT(bbox), action == output_action_print ? GTK_STOCK_PRINT : GTK_STOCK_OK);

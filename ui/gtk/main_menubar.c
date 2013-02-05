@@ -1168,9 +1168,6 @@ static const char *ui_desc_menubar =
 "        <menuitem name='http_req' action='/StatisticsMenu/HTTP/http_req'/>\n"
 "        <menuitem name='http_srv' action='/StatisticsMenu/HTTP/http_srv'/>\n"
 "      </menu>\n"
-"      <menuitem name='IPAddresses' action='/StatisticsMenu/ip_hosts'/>\n"
-"      <menuitem name='IPDestinations' action='/StatisticsMenu/dests'/>\n"
-"      <menuitem name='IPptype' action='/StatisticsMenu/ptype'/>\n"
 "      <menuitem name='ONC-RPC-Programs' action='/StatisticsMenu/ONC-RPC-Programs'/>\n"
 "      <menu name= 'SametimeMenu' action='/StatisticsMenu/Sametime'>\n"
 "        <menuitem name='sametime' action='/StatisticsMenu/Sametime/sametime'/>\n"
@@ -1633,9 +1630,6 @@ static const GtkActionEntry main_menu_bar_entries[] = {
    { "/StatisticsMenu/HTTP/http_req",                   NULL,       "Requests",                         NULL, NULL, G_CALLBACK(gtk_stats_tree_cb) },
    { "/StatisticsMenu/HTTP/http_srv",                   NULL,       "Load Distribution",                NULL, NULL, G_CALLBACK(gtk_stats_tree_cb) },
 
-   { "/StatisticsMenu/ip_hosts",                        NULL,       "IP Addresses...",                  NULL, NULL, G_CALLBACK(gtk_stats_tree_cb) },
-   { "/StatisticsMenu/dests",                           NULL,       "IP Destinations...",               NULL, NULL, G_CALLBACK(gtk_stats_tree_cb) },
-   { "/StatisticsMenu/ptype",                           NULL,       "IP Protocol Types..",              NULL, NULL, G_CALLBACK(gtk_stats_tree_cb) },
    { "/StatisticsMenu/ONC-RPC-Programs",                NULL,       "ONC-RPC Programs",                 NULL, NULL, G_CALLBACK(gtk_rpcprogs_cb) },
    { "/StatisticsMenu/Sametime",                        NULL,       "Sametime",                         NULL, NULL, NULL },
    { "/StatisticsMenu/Sametime/sametime",               NULL,       "Messages",                         NULL, NULL, G_CALLBACK(gtk_stats_tree_cb) },

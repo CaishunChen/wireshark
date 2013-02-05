@@ -612,11 +612,11 @@ gtk_sipstat_init(const char *optarg, void *userdata _U_)
     /* Initialise & show number of packets */
     sp->packets = 0;
     sp->packets_label = gtk_label_new("SIP stats (0 SIP packets)");
-    gtk_container_add(GTK_CONTAINER(main_vb), sp->packets_label);
+    gtk_box_pack_start(GTK_BOX(main_vb), sp->packets_label, TRUE, TRUE, 0);
 
     sp->resent_packets = 0;
     sp->resent_label = gtk_label_new("(0 resent packets)");
-    gtk_container_add(GTK_CONTAINER(main_vb), sp->resent_label);
+    gtk_box_pack_start(GTK_BOX(main_vb), sp->resent_label, TRUE, TRUE, 0);
     gtk_widget_show(sp->resent_label);
 
 
@@ -666,11 +666,11 @@ gtk_sipstat_init(const char *optarg, void *userdata _U_)
 
     /* Separator between requests and responses */
     separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
-    gtk_container_add(GTK_CONTAINER(main_vb), separator);
+    gtk_box_pack_start(GTK_BOX(main_vb), separator, TRUE, TRUE, 0);
 
     /* Request table and frame */
     request_fr = gtk_frame_new("List of request methods");
-    gtk_container_add(GTK_CONTAINER(main_vb), request_fr);
+    gtk_box_pack_start(GTK_BOX(main_vb), request_fr, TRUE, TRUE, 0);
     gtk_container_set_border_width(GTK_CONTAINER(request_fr), 0);
 
     sp->request_box = ws_gtk_box_new(GTK_ORIENTATION_VERTICAL, 10, FALSE);
@@ -680,7 +680,7 @@ gtk_sipstat_init(const char *optarg, void *userdata _U_)
 	sp->max_setup_time =0;
 	sp->min_setup_time =0;
     sp->average_setup_time_label = gtk_label_new("(Not calculated)");
-    gtk_container_add(GTK_CONTAINER(main_vb), sp->average_setup_time_label);
+    gtk_box_pack_start(GTK_BOX(main_vb), sp->average_setup_time_label, TRUE, TRUE, 0);
     gtk_widget_show(sp->average_setup_time_label);
 
 

@@ -60,9 +60,9 @@ typedef struct _wsp_stats_t {
 	guint32		 num_pdus;
 	GtkWidget 	*win;
 	GHashTable	*hash;
-	GtkWidget	*table_pdu_types;
-	GtkWidget	*table_status_code;
-	guint		 index;	/* Number of status code to display */
+	GtkWidget	*grid_pdu_types;
+	GtkWidget	*grid_status_code;
+	guint		 index;	/* Number of status codes to display */
 } wspstat_t;
 /* used to keep track of a single type of status code */
 typedef struct _wsp_status_code_t {
@@ -102,14 +102,14 @@ wsp_draw_statuscode(gchar *key _U_, wsp_status_code_t *data, gchar * unused _U_ 
 
 		/* Maybe we should display the hexadecimal value ? */
 		/* g_snprintf(string_buff, sizeof(string_buff), "%s  (0X%x)", data->name, *key); */
-		tmp = gtk_label_new( data->name  /* string_buff */ );
-		gtk_table_attach_defaults(GTK_TABLE(data->sp->table_status_code), tmp, x, x+1, y, y+1);
+		tmp = gtk_label_new(data->name  /* string_buff */ );
+		ws_gtk_grid_attach_defaults(GTK_GRID(data->sp->grid_status_code), tmp, x, y, 1, 1);
 		gtk_label_set_justify(GTK_LABEL(tmp), GTK_JUSTIFY_LEFT);
 		gtk_widget_show(tmp);
 
 		g_snprintf( string_buff, sizeof(string_buff), "%9d", data->packets );
 		data->widget = gtk_label_new( string_buff );
-		gtk_table_attach_defaults(GTK_TABLE(data->sp->table_status_code), data->widget, x+1, x+2, y, y+1);
+		ws_gtk_grid_attach_defaults(GTK_GRID(data->sp->grid_status_code), data->widget, x+1, y, 1, 1);
 		gtk_label_set_justify(GTK_LABEL(data->widget), GTK_JUSTIFY_LEFT);
 		gtk_widget_show( data->widget );
 
@@ -207,7 +207,6 @@ wspstat_draw(void *psp)
 	wspstat_t *sp=psp;
 	guint32 i;
 	char str[256];
-	guint idx;
 
 	for(i=1;i<=sp->num_pdus ; i++)
 	{
@@ -215,14 +214,7 @@ wspstat_draw(void *psp)
 		 gtk_label_set_text( GTK_LABEL(sp->pdu_stats[i].widget), str);
 	}
 
-	idx=sp->index;
-	g_hash_table_foreach( sp->hash, (GHFunc) wsp_draw_statuscode, NULL );
-	if (idx != sp->index){
-		/* We have inserted a new entry corresponding to a status code ,
-		 * let's resize the table */
-		gtk_table_resize ( GTK_TABLE(sp->table_status_code), sp->index  % 2 , 4);
-	}
-
+	g_hash_table_foreach(sp->hash, (GHFunc)wsp_draw_statuscode, NULL);
 }
 
 
@@ -255,7 +247,7 @@ add_table_entry(wspstat_t *sp, const char *str, int x, int y, int idx)
 	GtkWidget *tmp;
 
 	tmp=gtk_label_new( str );
-	gtk_table_attach_defaults(GTK_TABLE(sp->table_pdu_types), tmp, x, x+1, y, y+1);
+	ws_gtk_grid_attach_defaults(GTK_GRID(sp->grid_pdu_types), tmp, x, y, 1, 1);
 	gtk_label_set_justify(GTK_LABEL(tmp), GTK_JUSTIFY_LEFT);
 	gtk_widget_show(tmp);
 	if (idx != 0) {
@@ -368,21 +360,21 @@ gtk_wspstat_init(const char *optarg, void *userdata _U_)
 
 	/* PDU Types frame */
 	pdutypes_fr = gtk_frame_new("Summary of PDU Types (wsp.pdu_type)");
-  	gtk_container_add(GTK_CONTAINER(main_vb), pdutypes_fr);
+	gtk_box_pack_start(GTK_BOX(main_vb), pdutypes_fr, TRUE, TRUE, 0);
 
-	sp->table_pdu_types = gtk_table_new( (sp->num_pdus+1) / 2 + 1, 4, FALSE);
-	gtk_container_add( GTK_CONTAINER( pdutypes_fr), sp->table_pdu_types);
-	gtk_container_set_border_width( GTK_CONTAINER(sp->table_pdu_types) , 10);
+	sp->grid_pdu_types = ws_gtk_grid_new();
+	gtk_container_add(GTK_CONTAINER(pdutypes_fr), sp->grid_pdu_types);
+	gtk_container_set_border_width(GTK_CONTAINER(sp->grid_pdu_types), 10);
 
 	wsp_init_table(sp);
 
 	/* Status Codes frame */
 	statuscode_fr = gtk_frame_new("Summary of Status Code (wsp.reply.status)");
-  	gtk_container_add(GTK_CONTAINER(main_vb), statuscode_fr);
+	gtk_box_pack_start(GTK_BOX(main_vb), statuscode_fr, FALSE, FALSE, 0);
 
-	sp->table_status_code = gtk_table_new( 0, 4, FALSE);
-	gtk_container_add( GTK_CONTAINER( statuscode_fr), sp->table_status_code);
-	gtk_container_set_border_width( GTK_CONTAINER(sp->table_status_code) , 10);
+	sp->grid_status_code = ws_gtk_grid_new();
+	gtk_container_add(GTK_CONTAINER(statuscode_fr), sp->grid_status_code);
+	gtk_container_set_border_width(GTK_CONTAINER(sp->grid_status_code), 10);
 	sp->index = 0; 		/* No answers to display yet */
 
 	error_string = register_tap_listener(

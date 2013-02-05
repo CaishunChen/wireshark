@@ -270,7 +270,7 @@ static void
 mcast_on_params(GtkButton *button _U_, gpointer data _U_)
 {
 	GtkWidget *main_vb;
-	GtkWidget *label, *hbuttonbox, *table;
+	GtkWidget *label, *hbuttonbox, *grid;
 	GtkWidget *ok_bt, *cancel_bt;
 	GtkWidget *entry1, *entry2, *entry3, *entry4, *entry5;
 	gchar label_text[51];
@@ -293,45 +293,44 @@ mcast_on_params(GtkButton *button _U_, gpointer data _U_)
 	gtk_container_add(GTK_CONTAINER(mcast_params_dlg), main_vb);
 	gtk_widget_show(main_vb);
 
-	table = gtk_table_new(6, 2, FALSE);
-	gtk_container_add (GTK_CONTAINER (main_vb), table);
-
+	grid = ws_gtk_grid_new();
+	gtk_box_pack_start(GTK_BOX(main_vb), grid, TRUE, TRUE, 0);
 	label = gtk_label_new("  Burst measurement interval (ms)  ");
-	gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, 0, 1);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), label, 0, 0, 1, 1);
 	entry1 = gtk_entry_new();
 	g_snprintf(label_text, sizeof(label_text), "%u", mcast_stream_burstint);
 	gtk_entry_set_text(GTK_ENTRY(entry1), label_text);
-	gtk_table_attach_defaults(GTK_TABLE(table), entry1, 1, 2, 0, 1);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), entry1, 1, 0, 1, 1);
 	label = gtk_label_new("  Burst alarm threshold (packets)   ");
-	gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, 1, 2);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), label, 0, 1, 1, 1);
 	entry2 = gtk_entry_new();
 	g_snprintf(label_text, sizeof(label_text), "%u", mcast_stream_trigger);
 	gtk_entry_set_text(GTK_ENTRY(entry2), label_text);
-	gtk_table_attach_defaults(GTK_TABLE(table), entry2, 1, 2, 1, 2);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), entry2, 1, 1, 1, 1);
 	label = gtk_label_new("  Buffer alarm threshold (bytes)     ");
-	gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, 2, 3);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), label, 0, 2, 1, 1);
 	entry3 = gtk_entry_new();
 	g_snprintf(label_text, sizeof(label_text), "%u", mcast_stream_bufferalarm);
 	gtk_entry_set_text(GTK_ENTRY(entry3), label_text);
-	gtk_table_attach_defaults(GTK_TABLE(table), entry3, 1, 2, 2, 3);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), entry3, 1, 2, 1, 1);
 	label = gtk_label_new("  Stream empty speed (kbit/s)      ");
-	gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, 3, 4);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), label, 0, 3, 1, 1);
 	entry4 = gtk_entry_new();
 	g_snprintf(label_text, sizeof(label_text), "%u", mcast_stream_emptyspeed);
 	gtk_entry_set_text(GTK_ENTRY(entry4), label_text);
-	gtk_table_attach_defaults(GTK_TABLE(table), entry4, 1, 2, 3, 4);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), entry4, 1, 3, 1, 1);
 	label = gtk_label_new("  Total empty speed (kbit/s)       ");
-	gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, 4, 5);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), label, 0, 4, 1, 1);
 	entry5 = gtk_entry_new();
 	g_snprintf(label_text, sizeof(label_text), "%u", mcast_stream_cumulemptyspeed);
 	gtk_entry_set_text(GTK_ENTRY(entry5), label_text);
-	gtk_table_attach_defaults(GTK_TABLE(table), entry5, 1, 2, 4, 5);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), entry5, 1, 4, 1, 1);
 
-	gtk_widget_show (table);
+	gtk_widget_show (grid);
 
 	/* button row */
 	hbuttonbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
-	gtk_table_attach_defaults(GTK_TABLE(table), hbuttonbox, 0, 2, 5, 6);
+	ws_gtk_grid_attach_defaults(GTK_GRID(grid), hbuttonbox, 0, 5, 2, 1);
 	ok_bt = gtk_button_new_from_stock(GTK_STOCK_OK);
 	gtk_container_add (GTK_CONTAINER(hbuttonbox), ok_bt);
 	cancel_bt = gtk_button_new_from_stock(GTK_STOCK_CANCEL);

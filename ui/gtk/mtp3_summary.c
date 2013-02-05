@@ -354,7 +354,7 @@ void mtp3_sum_gtk_sum_cb(GtkAction *action _U_, gpointer user_data _U_)
 
   /* MTP3 SPECIFIC */
   table_fr = gtk_frame_new("Service Indicator (SI) Totals");
-  gtk_container_add(GTK_CONTAINER(main_vb), table_fr);
+  gtk_box_pack_start(GTK_BOX(main_vb), table_fr, TRUE, TRUE, 0);
   gtk_widget_show(table_fr);
 
   table = create_list();

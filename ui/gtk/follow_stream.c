@@ -744,7 +744,7 @@ follow_stream(gchar *title, follow_info_t *follow_info,
 	} else {
 		stream_fr = gtk_frame_new("Stream Content");
 	}
-	gtk_container_add(GTK_CONTAINER(vbox), stream_fr);
+	gtk_box_pack_start(GTK_BOX(vbox), stream_fr, TRUE, TRUE, 0);
 	gtk_widget_show(stream_fr);
 
 	stream_vb = ws_gtk_box_new(GTK_ORIENTATION_VERTICAL, 6, FALSE);

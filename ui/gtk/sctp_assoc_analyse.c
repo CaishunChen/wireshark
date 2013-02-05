@@ -526,7 +526,7 @@ static void create_analyse_window(struct sctp_analyse* u_data)
 
 	/* Start a notebook for flipping between sets of changes */
 	notebook = gtk_notebook_new();
-	gtk_container_add(GTK_CONTAINER(main_vb), notebook);
+	gtk_box_pack_start(GTK_BOX(main_vb), notebook, TRUE, TRUE, 0);
 	g_object_set_data(G_OBJECT(window), "notebook", notebook);
 	g_signal_connect(notebook, "switch_page", G_CALLBACK(on_notebook_switch_page), NULL);
 
@@ -606,7 +606,7 @@ static void create_analyse_window(struct sctp_analyse* u_data)
 	u_data->analyse_nb->page2 = g_malloc(sizeof(struct page));
 
 	u_data->analyse_nb->page2->addr_frame = gtk_frame_new(NULL);
-	gtk_container_add(GTK_CONTAINER(page2), u_data->analyse_nb->page2->addr_frame);
+        gtk_box_pack_start(GTK_BOX(page2), u_data->analyse_nb->page2->addr_frame, TRUE, TRUE, 0);
 
 	addr_hb = ws_gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3, FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(addr_hb), 5);
@@ -713,7 +713,7 @@ static void create_analyse_window(struct sctp_analyse* u_data)
 	u_data->analyse_nb->page3 = g_malloc(sizeof(struct page));
 	u_data->analyse_nb->page3->addr_frame = gtk_frame_new(NULL);
 
-	gtk_container_add(GTK_CONTAINER(page3), u_data->analyse_nb->page3->addr_frame);
+	gtk_box_pack_start(GTK_BOX(page3), u_data->analyse_nb->page3->addr_frame, TRUE, TRUE, 0);
 
 	addr_hb = ws_gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3, FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(addr_hb), 5);
