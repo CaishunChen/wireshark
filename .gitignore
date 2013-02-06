@@ -70,11 +70,13 @@ autom4te.cache
 capinfos
 captype
 compile
+config.guess
 config.h
 config.h.in
 config.cache
 config.log
 config.status
+config.sub
 configure
 depcomp
 dftest
