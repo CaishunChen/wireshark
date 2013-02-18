@@ -127,236 +127,58 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
 	guint offset = 0;
 	gint new_offset = 0;
-	guint tmp = 0;
+	guint tmp;
 	guint realsize = 0;
-	guint8* rawstr = NULL;
+	guint8* rawstr;
+	proto_item *ti;
+	proto_tree *rtpproxy_tree;
 
 	/* Clear out stuff in the info column - we''l set it later */
 	col_clear(pinfo->cinfo, COL_INFO);
 
-	if (tree) { /* we are being asked for details */
-		proto_item *ti = NULL;
-		proto_tree *rtpproxy_tree = NULL;
-		ti = proto_tree_add_item(tree, proto_rtpproxy, tvb, 0, -1, ENC_NA);
-		rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy);
+	ti = proto_tree_add_item(tree, proto_rtpproxy, tvb, 0, -1, ENC_NA);
+	rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy);
 
-		/* Extract Cookie */
-		offset = tvb_find_guint8(tvb, offset, -1, ' ');
-		ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_cookie, tvb, 0, offset, ENC_ASCII);
+	/* Extract Cookie */
+	offset = tvb_find_guint8(tvb, offset, -1, ' ');
+	ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_cookie, tvb, 0, offset, ENC_ASCII);
 
-		/* Skip whitespace */
-		offset = tvb_skip_wsp(tvb, offset+1, -1);
+	/* Skip whitespace */
+	offset = tvb_skip_wsp(tvb, offset+1, -1);
 
-		if (tvb_find_guint8(tvb, offset, -1, '\n') == -1){
-			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
-			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - offset);
-			realsize = tvb_reported_length(tvb);
-		}
-		else{
-			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
-			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - (offset+1));
-			realsize = tvb_reported_length(tvb) - 1;
-		}
+	if (tvb_find_guint8(tvb, offset, -1, '\n') == -1){
+		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
+		rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - offset);
+		realsize = tvb_reported_length(tvb);
+	}
+	else{
+		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
+		rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - (offset+1));
+		realsize = tvb_reported_length(tvb) - 1;
+	}
 
-		/* Extract command */
-		tmp = tvb_get_guint8(tvb, offset);
-		switch (tmp)
-		{
-			case 'V':
-			case 'v':
-			case 'I':
-			case 'i':
-			case 'X':
-			case 'x':
-			case 'U':
-			case 'u':
-			case 'L':
-			case 'l':
-			case 'D':
-			case 'd':
-			case 'P':
-			case 'p':
-			case 'S':
-			case 's':
-				/* A specific case - Status answer */
-				if ('e' == tvb_get_guint8(tvb, offset+1)){
-					col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
-					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-					proto_item_set_text(ti, "Reply");
-
-					rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-
-					new_offset = tvb_find_guint8(tvb, offset, -1, '\n');
-					if(new_offset == -1)
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, -1, ENC_NA);
-					else{
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, new_offset - offset, ENC_NA);
-						offset = new_offset;
-					}
-					break;
-				}
-			case 'R':
-			case 'r':
-			case 'C':
-			case 'c':
-			case 'Q':
-			case 'q':
-				col_add_fstr(pinfo->cinfo, COL_INFO, "Request: %s", rawstr);
-				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_request, tvb, offset, -1, ENC_NA);
-				proto_item_set_text(ti, "Request");
-				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_request);
-
-				/* A specific case - version */
-				if ((tmp == 'v') || (tmp == 'V')){
-					if ('F' == tvb_get_guint8(tvb, offset+1)){
-						/* Skip whitespace */
-						new_offset = tvb_skip_wsp(tvb, offset+(2+1), -1);
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, offset, new_offset+8 - offset, ENC_ASCII);
-						offset = new_offset+8;
-					}
-					else{
-						ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_handshake, tvb, offset, 1, ENC_ASCII);
-						proto_item_set_text(ti, "Handshake");
-						/* Skip 'V' */
-						offset++;
-					}
-					break;
-				}
-
-				/* All other commands */
-				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command, tvb, offset, 1, ENC_NA);
-				proto_item_set_text(ti, "Command: %s", val_to_str(tmp, commandtypenames, "Unknown (0x%02x)"));
-
-				/* Another specific case - query information */
-				if ((tmp == 'I') || (tmp == 'i')){
-					/* Check for 'brief' parameter */
-					new_offset = tvb_find_guint8(tvb, offset, -1, 'b');
-					if(new_offset != -1){
-						rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command_parameters, tvb, offset+1, 1, ENC_ASCII);
-						rtpproxy_tree = proto_item_get_parent(ti);
-						offset = new_offset;
-					}
-					/* Skip one space forward */
-					offset++;
-					break;
-				}
-
-				/* Extract parameters */
-				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-
-				if(new_offset == -1){
-					/* No more parameters */
-					break;
-				}
-				if (new_offset != (gint)offset + 1){
-					rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command_parameters, tvb, offset+1, new_offset - (offset+1), ENC_ASCII);
-					rtpproxy_tree = proto_item_get_parent(ti);
-				}
-				/* Skip whitespace */
-				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-				/* Extract Call-ID */
-				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_callid, tvb, offset, new_offset - offset, ENC_ASCII);
-				/* Skip whitespace */
-				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-				/* Extract IP and Port in case of Offer/Answer */
-				if ((tmp == 'U') || (tmp == 'u') || (tmp == 'L') || (tmp == 'l')){
-					/* Extract IP */
-					new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-					if (tvb_find_guint8(tvb, offset, new_offset - offset, ':') == -1)
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, new_offset - offset, ENC_ASCII);
-					else
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, new_offset - offset, ENC_ASCII);
-					/* Skip whitespace */
-					offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-					/* Extract Port */
-					new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_port, tvb, offset, new_offset - offset, ENC_ASCII);
-					/* Skip whitespace */
-					offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-				}
-
-				/* Extract Copy target */
-				if ((tmp == 'C') || (tmp == 'c')){
-					new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_copy_target, tvb, offset, new_offset - offset, ENC_ASCII);
-					/* Skip whitespace */
-					offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-				}
-
-				/* Extract Playback file and codecs */
-				if ((tmp == 'P') || (tmp == 'p')){
-					/* Extract filename */
-					new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_playback_filename, tvb, offset, new_offset - offset, ENC_ASCII);
-					/* Skip whitespace */
-					offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-					/* Extract codec */
-					new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_playback_codec, tvb, offset, new_offset - offset, ENC_ASCII);
-					/* Skip whitespace */
-					offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-				}
-
-				/* Extract first tag */
-				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-				if(new_offset == -1){
-					rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
-					/* No more parameters */
-					break;
-				}
-				rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, (guint)new_offset);
-				/* Skip whitespace */
-				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-				/* Extract second tag */
-				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-				if(new_offset == -1){
-					rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
-					/* No more parameters */
-					break;
-				}
-				rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, (guint)new_offset);
-				/* Skip whitespace */
-				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-				/* Extract Notification address */
-				if ((tmp == 'U') || (tmp == 'u')){
-					new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify, tvb, offset, realsize - offset, ENC_NA);
-					proto_item_set_text(ti, "Notify");
-					rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_notify);
-					if(new_offset == -1){
-						/* FIXME only IPv4 is supported */
-						new_offset = tvb_find_guint8(tvb, offset, -1, ':');
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, offset, new_offset - offset, ENC_ASCII);
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, new_offset+1, realsize - (new_offset+1), ENC_ASCII);
-						/* No more parameters */
-						break;
-					}
-					if(new_offset - offset < 6){
-						/* Only port is supplied */
-						ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, offset, 0, ENC_ASCII);
-						proto_item_set_text(ti, "Notification IPv4: <skipped>");
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, offset, new_offset - offset, ENC_ASCII);
-					}
-					else{
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, offset, new_offset - offset, ENC_ASCII);
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, new_offset+1, realsize - (new_offset+1), ENC_ASCII);
-					}
-					/* Skip whitespace */
-					offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_tag, tvb, offset, realsize - offset, ENC_ASCII);
-				}
-				break;
-			case 'a':
+	/* Extract command */
+	tmp = tvb_get_guint8(tvb, offset);
+	switch (tmp)
+	{
+		case 'V':
+		case 'v':
+		case 'I':
+		case 'i':
+		case 'X':
+		case 'x':
+		case 'U':
+		case 'u':
+		case 'L':
+		case 'l':
+		case 'D':
+		case 'd':
+		case 'P':
+		case 'p':
+		case 'S':
+		case 's':
+			/* A specific case - Status answer */
+			if ('e' == tvb_get_guint8(tvb, offset+1)){
 				col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
 				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
 				proto_item_set_text(ti, "Reply");
@@ -371,82 +193,250 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 					offset = new_offset;
 				}
 				break;
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
-				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-				proto_item_set_text(ti, "Reply");
+			}
+		case 'R':
+		case 'r':
+		case 'C':
+		case 'c':
+		case 'Q':
+		case 'q':
+			col_add_fstr(pinfo->cinfo, COL_INFO, "Request: %s", rawstr);
+			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_request, tvb, offset, -1, ENC_NA);
+			proto_item_set_text(ti, "Request");
+			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_request);
 
-				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
+			/* A specific case - version */
+			if ((tmp == 'v') || (tmp == 'V')){
+				if ('F' == tvb_get_guint8(tvb, offset+1)){
+					/* Skip whitespace */
+					new_offset = tvb_skip_wsp(tvb, offset+(2+1), -1);
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, offset, new_offset+8 - offset, ENC_ASCII);
+					offset = new_offset+8;
+				}
+				else{
+					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_handshake, tvb, offset, 1, ENC_ASCII);
+					proto_item_set_text(ti, "Handshake");
+					/* Skip 'V' */
+					offset++;
+				}
+				break;
+			}
 
-				if ((tmp == '0')&& ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
-					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII);
-					proto_item_set_text(ti, "Reply: Ok");
-					offset++;
-					break;
+			/* All other commands */
+			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command, tvb, offset, 1, ENC_NA);
+			proto_item_set_text(ti, "Command: %s", val_to_str(tmp, commandtypenames, "Unknown (0x%02x)"));
+
+			/* Another specific case - query information */
+			if ((tmp == 'I') || (tmp == 'i')){
+				/* Check for 'brief' parameter */
+				new_offset = tvb_find_guint8(tvb, offset, -1, 'b');
+				if(new_offset != -1){
+					rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command_parameters, tvb, offset+1, 1, ENC_ASCII);
+					rtpproxy_tree = proto_item_get_parent(ti);
+					offset = new_offset;
 				}
-				if ((tmp == '1') && ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
-					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_ok, tvb, offset, 1, ENC_ASCII);
-					proto_item_set_text(ti, "Version supported: Yes");
-					offset++;
-					break;
-				}
-				if (tvb_reported_length(tvb) == offset+9){
-					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_supported, tvb, offset, 8, ENC_ASCII);
-					offset += 8;
-					break;
-				}
+				/* Skip one space forward */
+				offset++;
+				break;
+			}
+
+			/* Extract parameters */
+			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+
+			if(new_offset == -1){
+				/* No more parameters */
+				break;
+			}
+			if (new_offset != (gint)offset + 1){
+				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command_parameters, tvb, offset+1, new_offset - (offset+1), ENC_ASCII);
+				rtpproxy_tree = proto_item_get_parent(ti);
+			}
+			/* Skip whitespace */
+			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+			/* Extract Call-ID */
+			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_callid, tvb, offset, new_offset - offset, ENC_ASCII);
+			/* Skip whitespace */
+			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+			/* Extract IP and Port in case of Offer/Answer */
+			if ((tmp == 'U') || (tmp == 'u') || (tmp == 'L') || (tmp == 'l')){
+				/* Extract IP */
+				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+				if (tvb_find_guint8(tvb, offset, new_offset - offset, ':') == -1)
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, new_offset - offset, ENC_ASCII);
+				else
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, new_offset - offset, ENC_ASCII);
+				/* Skip whitespace */
+				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
 				/* Extract Port */
 				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_port, tvb, offset, new_offset - offset, ENC_ASCII);
 				/* Skip whitespace */
 				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+			}
 
-				/* Extract IP */
-				tmp = tvb_find_line_end(tvb, offset, -1, &new_offset, FALSE);
-				if (tvb_find_guint8(tvb, offset, -1, ':') == -1)
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ENC_ASCII);
-				else
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, ENC_ASCII);
-				offset = offset + tmp;
-				break;
-			case 'E':
-			case 'e':
-				col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
-				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-				proto_item_set_text(ti, "Error Reply");
-				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, 2, ENC_NA);
-				tmp = tvb_get_guint8(tvb, offset+1) - 48;
-				proto_item_set_text(ti, "Error type: %s", val_to_str(tmp, errortypenames, "Unknown (0x%02x)"));
-				offset += 2;
-				break;
-			default:
-				break;
-		}
-		new_offset = tvb_find_guint8(tvb, offset, -1, '\n');
-		if (new_offset != -1){
-			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, new_offset, -1, ENC_NA);
-			proto_item_set_text(ti, "LF (optional)");
-		}
-	}
-	else{
-		if (tvb_find_guint8(tvb, 0, -1, '\n') == -1)
-			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
-		else
-			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
-	}
+			/* Extract Copy target */
+			if ((tmp == 'C') || (tmp == 'c')){
+				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_copy_target, tvb, offset, new_offset - offset, ENC_ASCII);
+				/* Skip whitespace */
+				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+			}
 
-	return;
+			/* Extract Playback file and codecs */
+			if ((tmp == 'P') || (tmp == 'p')){
+				/* Extract filename */
+				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_playback_filename, tvb, offset, new_offset - offset, ENC_ASCII);
+				/* Skip whitespace */
+				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+				/* Extract codec */
+				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_playback_codec, tvb, offset, new_offset - offset, ENC_ASCII);
+				/* Skip whitespace */
+				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+			}
+
+			/* Extract first tag */
+			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+			if(new_offset == -1){
+				rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
+				/* No more parameters */
+				break;
+			}
+			rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, (guint)new_offset);
+			/* Skip whitespace */
+			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+			/* Extract second tag */
+			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+			if(new_offset == -1){
+				rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
+				/* No more parameters */
+				break;
+			}
+			rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, (guint)new_offset);
+			/* Skip whitespace */
+			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+			/* Extract Notification address */
+			if ((tmp == 'U') || (tmp == 'u')){
+				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify, tvb, offset, realsize - offset, ENC_NA);
+				proto_item_set_text(ti, "Notify");
+				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_notify);
+				if(new_offset == -1){
+					/* FIXME only IPv4 is supported */
+					new_offset = tvb_find_guint8(tvb, offset, -1, ':');
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, offset, new_offset - offset, ENC_ASCII);
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, new_offset+1, realsize - (new_offset+1), ENC_ASCII);
+					/* No more parameters */
+					break;
+				}
+				if(new_offset - offset < 6){
+					/* Only port is supplied */
+					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, offset, 0, ENC_ASCII);
+					proto_item_set_text(ti, "Notification IPv4: <skipped>");
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, offset, new_offset - offset, ENC_ASCII);
+				}
+				else{
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, offset, new_offset - offset, ENC_ASCII);
+					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, new_offset+1, realsize - (new_offset+1), ENC_ASCII);
+				}
+				/* Skip whitespace */
+				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_tag, tvb, offset, realsize - offset, ENC_ASCII);
+			}
+			break;
+		case 'a':
+			col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
+			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
+			proto_item_set_text(ti, "Reply");
+
+			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
+
+			new_offset = tvb_find_guint8(tvb, offset, -1, '\n');
+			if(new_offset == -1)
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, -1, ENC_NA);
+			else{
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, new_offset - offset, ENC_NA);
+				offset = new_offset;
+			}
+			break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
+			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
+			proto_item_set_text(ti, "Reply");
+
+			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
+
+			if ((tmp == '0')&& ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
+				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII);
+				proto_item_set_text(ti, "Reply: Ok");
+				offset++;
+				break;
+			}
+			if ((tmp == '1') && ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
+				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_ok, tvb, offset, 1, ENC_ASCII);
+				proto_item_set_text(ti, "Version supported: Yes");
+				offset++;
+				break;
+			}
+			if (tvb_reported_length(tvb) == offset+9){
+				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_supported, tvb, offset, 8, ENC_ASCII);
+				offset += 8;
+				break;
+			}
+
+			/* Extract Port */
+			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_port, tvb, offset, new_offset - offset, ENC_ASCII);
+			/* Skip whitespace */
+			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+			/* Extract IP */
+			tmp = tvb_find_line_end(tvb, offset, -1, &new_offset, FALSE);
+			if (tvb_find_guint8(tvb, offset, -1, ':') == -1)
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ENC_ASCII);
+			else
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, ENC_ASCII);
+			offset = offset + tmp;
+			break;
+		case 'E':
+		case 'e':
+			col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
+			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
+			proto_item_set_text(ti, "Error Reply");
+			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
+			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, 2, ENC_NA);
+			tmp = tvb_get_guint8(tvb, offset+1) - 48;
+			proto_item_set_text(ti, "Error type: %s", val_to_str(tmp, errortypenames, "Unknown (0x%02x)"));
+			offset += 2;
+			break;
+		default:
+			break;
+	}
+	new_offset = tvb_find_guint8(tvb, offset, -1, '\n');
+	if (new_offset != -1){
+		ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, new_offset, -1, ENC_NA);
+		proto_item_set_text(ti, "LF (optional)");
+	}
 }
 
 void
