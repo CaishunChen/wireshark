@@ -441,6 +441,12 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 		g_free(rawstr);
 	}
+	else{
+		if (tvb_find_guint8(tvb, 0, -1, '\n') == -1)
+			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
+		else
+			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
+	}
 
 	return;
 }
