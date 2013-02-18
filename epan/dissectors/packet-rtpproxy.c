@@ -149,13 +149,13 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 		if (tvb_find_guint8(tvb, offset, -1, '\n') == -1){
 			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
-			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_length(tvb) - offset);
-			realsize = tvb_length(tvb);
+			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - offset);
+			realsize = tvb_reported_length(tvb);
 		}
 		else{
 			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
-			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_length(tvb) - (offset+1));
-			realsize = tvb_length(tvb) - 1;
+			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - (offset+1));
+			realsize = tvb_reported_length(tvb) - 1;
 		}
 
 		/* Extract command */
@@ -387,19 +387,19 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
 
-				if ((tmp == '0')&& ((tvb_length(tvb) == offset+1)||(tvb_length(tvb) == offset+2))){
+				if ((tmp == '0')&& ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
 					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII);
 					proto_item_set_text(ti, "Reply: Ok");
 					offset++;
 					break;
 				}
-				if ((tmp == '1') && ((tvb_length(tvb) == offset+1)||(tvb_length(tvb) == offset+2))){
+				if ((tmp == '1') && ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
 					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_ok, tvb, offset, 1, ENC_ASCII);
 					proto_item_set_text(ti, "Version supported: Yes");
 					offset++;
 					break;
 				}
-				if (tvb_length(tvb) == offset+9){
+				if (tvb_reported_length(tvb) == offset+9){
 					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_supported, tvb, offset, 8, ENC_ASCII);
 					offset += 8;
 					break;
