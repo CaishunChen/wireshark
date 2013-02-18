@@ -149,12 +149,12 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 		if (tvb_find_guint8(tvb, offset, -1, '\n') == -1){
 			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
-			rawstr = tvb_get_string(tvb, offset, tvb_length(tvb) - offset);
+			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_length(tvb) - offset);
 			realsize = tvb_length(tvb);
 		}
 		else{
 			col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
-			rawstr = tvb_get_string(tvb, offset, tvb_length(tvb) - (offset+1));
+			rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_length(tvb) - (offset+1));
 			realsize = tvb_length(tvb) - 1;
 		}
 
@@ -438,8 +438,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, new_offset, -1, ENC_NA);
 			proto_item_set_text(ti, "LF (optional)");
 		}
-
-		g_free(rawstr);
 	}
 	else{
 		if (tvb_find_guint8(tvb, 0, -1, '\n') == -1)
