@@ -26,8 +26,7 @@
 #include "config.h"
 
 #include <epan/packet.h>
-
-#define RTPPROXY_PORT 22222
+#include <epan/prefs.h>
 
 static int proto_rtpproxy = -1;
 
@@ -97,6 +96,11 @@ static gint ett_rtpproxy_tag = -1;
 static gint ett_rtpproxy_notify = -1;
 
 static gint ett_rtpproxy_reply = -1;
+
+static guint rtpproxy_tcp_port = 22222;
+static guint rtpproxy_udp_port = 22222;
+
+void proto_reg_handoff_rtpproxy(void);
 
 void
 rtpptoxy_add_tag(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint end)
@@ -444,6 +448,8 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 void
 proto_register_rtpproxy(void)
 {
+	module_t *rtpproxy_module;
+
 	static hf_register_info hf[] = {
 		{
 			&hf_rtpproxy_cookie,
@@ -803,15 +809,47 @@ proto_register_rtpproxy(void)
 
 	proto_register_field_array(proto_rtpproxy, hf, array_length(hf));
 	proto_register_subtree_array(ett, array_length(ett));
+
+	rtpproxy_module = prefs_register_protocol(proto_rtpproxy, proto_reg_handoff_rtpproxy);
+	prefs_register_uint_preference(rtpproxy_module, "tcp.port",
+								 "RTPproxy TCP Port", /* Title */
+								 "RTPproxy TCP Port", /* Descr */
+								 10,
+								 &rtpproxy_tcp_port);
+
+	prefs_register_uint_preference(rtpproxy_module, "udp.port",
+								 "RTPproxy UDP Port", /* Title */
+								 "RTPproxy UDP Port", /* Descr */
+								 10,
+								 &rtpproxy_udp_port);
 }
 
 void
 proto_reg_handoff_rtpproxy(void)
 {
-	static dissector_handle_t rtpproxy_handle;
+	static guint old_rtpproxy_tcp_port = 0;
+	static guint old_rtpproxy_udp_port = 0;
 
-	rtpproxy_handle = create_dissector_handle(dissect_rtpproxy, proto_rtpproxy);
+	static dissector_handle_t rtpproxy_tcp_handle, rtpproxy_udp_handle;
 
-	dissector_add_uint("tcp.port", RTPPROXY_PORT, rtpproxy_handle);
-	dissector_add_uint("udp.port", RTPPROXY_PORT, rtpproxy_handle);
+	rtpproxy_tcp_handle = create_dissector_handle(dissect_rtpproxy, proto_rtpproxy);
+	rtpproxy_udp_handle = create_dissector_handle(dissect_rtpproxy, proto_rtpproxy);
+
+	/* Register TCP port for dissection */
+	if(old_rtpproxy_tcp_port != 0 && old_rtpproxy_tcp_port != rtpproxy_tcp_port){
+		dissector_delete_uint("tcp.port", old_rtpproxy_tcp_port, rtpproxy_tcp_handle);
+	}
+	if(rtpproxy_tcp_port != 0 && old_rtpproxy_tcp_port != rtpproxy_tcp_port) {
+		dissector_add_uint("tcp.port", rtpproxy_tcp_port, rtpproxy_tcp_handle);
+	}
+	old_rtpproxy_tcp_port = rtpproxy_tcp_port;
+
+	/* Register UDP port for dissection */
+	if(old_rtpproxy_udp_port != 0 && old_rtpproxy_udp_port != rtpproxy_udp_port){
+		dissector_delete_uint("udp.port", old_rtpproxy_udp_port, rtpproxy_udp_handle);
+	}
+	if(rtpproxy_udp_port != 0 && old_rtpproxy_udp_port != rtpproxy_udp_port) {
+		dissector_add_uint("udp.port", rtpproxy_udp_port, rtpproxy_udp_handle);
+	}
+	old_rtpproxy_udp_port = rtpproxy_udp_port;
 }
