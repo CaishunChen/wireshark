@@ -824,10 +824,15 @@ proto_reg_handoff_rtpproxy(void)
 	static guint old_rtpproxy_tcp_port = 0;
 	static guint old_rtpproxy_udp_port = 0;
 
+	static gboolean rtpproxy_initialized = FALSE;
+
 	static dissector_handle_t rtpproxy_tcp_handle, rtpproxy_udp_handle;
 
-	rtpproxy_tcp_handle = create_dissector_handle(dissect_rtpproxy, proto_rtpproxy);
-	rtpproxy_udp_handle = create_dissector_handle(dissect_rtpproxy, proto_rtpproxy);
+	if(!rtpproxy_initialized){
+		rtpproxy_tcp_handle = create_dissector_handle(dissect_rtpproxy, proto_rtpproxy);
+		rtpproxy_udp_handle = create_dissector_handle(dissect_rtpproxy, proto_rtpproxy);
+		rtpproxy_initialized = TRUE;
+	}
 
 	/* Register TCP port for dissection */
 	if(old_rtpproxy_tcp_port != 0 && old_rtpproxy_tcp_port != rtpproxy_tcp_port){
