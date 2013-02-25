@@ -102,12 +102,24 @@ static guint rtpproxy_udp_port = 22222;
 
 void proto_reg_handoff_rtpproxy(void);
 
-void
-rtpptoxy_add_tag(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint end)
+gint
+rtpptoxy_add_tag(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint realsize)
 {
 	proto_item *ti = NULL;
 	proto_tree *another_tree = NULL;
-	gint new_offset = tvb_find_guint8(tvb, begin, end, ';');
+	gint new_offset;
+	guint end;
+
+	new_offset = tvb_find_guint8(tvb, begin, -1, ' ');
+	if(new_offset < 0)
+		end = realsize; /* No more parameters */
+	else
+		end = new_offset;
+
+	/* SER/OpenSER/OpenSIPS/Kamailio adds Media-ID right after the Tag
+	 * separated by a semicolon
+	 */
+	new_offset = tvb_find_guint8(tvb, begin, end, ';');
 	if(new_offset == -1){
 		ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_tag, tvb, begin, end - begin, ENC_ASCII);
 		another_tree = proto_item_add_subtree(ti, ett_rtpproxy_tag);
@@ -119,7 +131,7 @@ rtpptoxy_add_tag(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint en
 		another_tree = proto_item_add_subtree(ti, ett_rtpproxy_tag);
 		proto_tree_add_item(another_tree, hf_rtpproxy_mediaid, tvb, new_offset+1, end - (new_offset+1), ENC_ASCII);
 	}
-	return;
+	return (end == realsize ? -1 : (gint)end);
 }
 
 static void
@@ -304,24 +316,16 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			}
 
 			/* Extract first tag */
-			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-			if(new_offset == -1){
-				rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
-				/* No more parameters */
-				break;
-			}
-			rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, (guint)new_offset);
+			new_offset = rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
+			if(new_offset == -1)
+				break; /* No more parameters */
 			/* Skip whitespace */
 			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
 			/* Extract second tag */
-			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-			if(new_offset == -1){
-				rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
-				/* No more parameters */
-				break;
-			}
-			rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, (guint)new_offset);
+			new_offset = rtpptoxy_add_tag(rtpproxy_tree, tvb, offset, realsize);
+			if(new_offset == -1)
+				break; /* No more parameters */
 			/* Skip whitespace */
 			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
