@@ -170,24 +170,16 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	}
 
 	/* Extract command */
-	tmp = tvb_get_guint8(tvb, offset);
+	tmp = g_ascii_tolower(tvb_get_guint8(tvb, offset));
 	switch (tmp)
 	{
-		case 'V':
 		case 'v':
-		case 'I':
 		case 'i':
-		case 'X':
 		case 'x':
-		case 'U':
 		case 'u':
-		case 'L':
 		case 'l':
-		case 'D':
 		case 'd':
-		case 'P':
 		case 'p':
-		case 'S':
 		case 's':
 			/* A specific case - Status answer */
 			if ('e' == tvb_get_guint8(tvb, offset+1)){
@@ -206,11 +198,8 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				}
 				break;
 			}
-		case 'R':
 		case 'r':
-		case 'C':
 		case 'c':
-		case 'Q':
 		case 'q':
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Request: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_request, tvb, offset, -1, ENC_NA);
@@ -218,7 +207,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_request);
 
 			/* A specific case - version */
-			if ((tmp == 'v') || (tmp == 'V')){
+			if (tmp == 'v'){
 				if ('F' == tvb_get_guint8(tvb, offset+1)){
 					/* Skip whitespace */
 					new_offset = tvb_skip_wsp(tvb, offset+(2+1), -1);
@@ -239,7 +228,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			proto_item_set_text(ti, "Command: %s", val_to_str(tmp, commandtypenames, "Unknown (0x%02x)"));
 
 			/* Another specific case - query information */
-			if ((tmp == 'I') || (tmp == 'i')){
+			if (tmp == 'i'){
 				/* Check for 'brief' parameter */
 				new_offset = tvb_find_guint8(tvb, offset, -1, 'b');
 				if(new_offset != -1){
@@ -275,7 +264,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
 			/* Extract IP and Port in case of Offer/Answer */
-			if ((tmp == 'U') || (tmp == 'u') || (tmp == 'L') || (tmp == 'l')){
+			if ((tmp == 'u') || (tmp == 'l')){
 				/* Extract IP */
 				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
 				if (tvb_find_guint8(tvb, offset, new_offset - offset, ':') == -1)
@@ -293,7 +282,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			}
 
 			/* Extract Copy target */
-			if ((tmp == 'C') || (tmp == 'c')){
+			if (tmp == 'c'){
 				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_copy_target, tvb, offset, new_offset - offset, ENC_ASCII);
 				/* Skip whitespace */
@@ -301,7 +290,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			}
 
 			/* Extract Playback file and codecs */
-			if ((tmp == 'P') || (tmp == 'p')){
+			if (tmp == 'p'){
 				/* Extract filename */
 				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_playback_filename, tvb, offset, new_offset - offset, ENC_ASCII);
@@ -330,7 +319,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
 			/* Extract Notification address */
-			if ((tmp == 'U') || (tmp == 'u')){
+			if (tmp == 'u'){
 				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
 				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify, tvb, offset, realsize - offset, ENC_NA);
 				proto_item_set_text(ti, "Notify");
@@ -422,7 +411,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, ENC_ASCII);
 			offset = offset + tmp;
 			break;
-		case 'E':
 		case 'e':
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
