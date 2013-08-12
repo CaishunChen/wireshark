@@ -58,6 +58,8 @@ static int hf_rtpproxy_version_request = -1;
 static int hf_rtpproxy_version_supported = -1;
 
 static const value_string commandtypenames[] = {
+	{ 'V', "Handshake/Ping" },
+	{ 'v', "Handshake/Ping" },
 	{ 'U', "Offer/Update" },
 	{ 'u', "Offer/Update" },
 	{ 'L', "Answer/Lookup" },
@@ -216,7 +218,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				}
 				else{
 					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_handshake, tvb, offset, 1, ENC_ASCII);
-					proto_item_set_text(ti, "Handshake");
 					/* Skip 'V' */
 					offset++;
 				}
@@ -455,9 +456,9 @@ proto_register_rtpproxy(void)
 			{
 				"Handshake",
 				"rtpproxy.handshake",
-				FT_STRING,
-				BASE_NONE,
-				NULL,
+				FT_UINT8,
+				BASE_DEC,
+				VALS(commandtypenames),
 				0x0,
 				NULL,
 				HFILL
