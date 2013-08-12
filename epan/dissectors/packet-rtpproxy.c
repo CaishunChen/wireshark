@@ -181,7 +181,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	tmp = g_ascii_tolower(tvb_get_guint8(tvb, offset));
 	switch (tmp)
 	{
-		case 'v':
 		case 'i':
 		case 'x':
 		case 'u':
@@ -206,6 +205,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				}
 				break;
 			}
+		case 'v':
 		case 'r':
 		case 'c':
 		case 'q':
@@ -216,16 +216,18 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 			/* A specific case - version */
 			if (tmp == 'v'){
-				if ('F' == tvb_get_guint8(tvb, offset+1)){
-					/* Skip whitespace */
-					new_offset = tvb_skip_wsp(tvb, offset+(2+1), -1);
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, offset, new_offset+8 - offset, ENC_ASCII);
-					offset = new_offset+8;
-				}
-				else{
+				if (offset + strlen("VF YYYMMDD") > realsize){
 					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_handshake, tvb, offset, 1, ENC_ASCII);
 					/* Skip 'V' */
 					offset++;
+				}
+				else{
+					/* Skip whitespace */
+					if ('f' == g_ascii_tolower(tvb_get_guint8(tvb, offset+1))){
+						new_offset = tvb_skip_wsp(tvb, offset+(2+1), -1);
+						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, offset, new_offset+8 - offset, ENC_ASCII);
+						offset = new_offset + strlen("YYYMMDD");
+					}
 				}
 				break;
 			}
