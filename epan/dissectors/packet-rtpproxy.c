@@ -226,7 +226,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 			/* All other commands */
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command, tvb, offset, 1, ENC_NA);
-			proto_item_set_text(ti, "Command: %s", val_to_str(tmp, commandtypenames, "Unknown (0x%02x)"));
 
 			/* Another specific case - query information */
 			if (tmp == 'i'){
@@ -599,9 +598,9 @@ proto_register_rtpproxy(void)
 			{
 				"Command",
 				"rtpproxy.command",
-				FT_STRING,
-				BASE_NONE,
-				NULL,
+				FT_UINT8,
+				BASE_DEC,
+				VALS(commandtypenames),
 				0x0,
 				NULL,
 				HFILL
