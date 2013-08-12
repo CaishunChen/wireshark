@@ -83,6 +83,12 @@ static const value_string commandtypenames[] = {
 	{ 0, NULL }
 };
 
+static const value_string oktypenames[] = {
+	{ '0', "Ok"},
+	{ '1', "Protocol Supported"},
+	{ 0, NULL }
+};
+
 static const value_string errortypenames[] = {
 	{ 1, "Syntax" },
 	{ 7, "Software" },
@@ -381,13 +387,11 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
 			if ((tmp == '0')&& ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
 				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII);
-				proto_item_set_text(ti, "Reply: Ok");
 				offset++;
 				break;
 			}
 			if ((tmp == '1') && ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
 				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_ok, tvb, offset, 1, ENC_ASCII);
-				proto_item_set_text(ti, "Version supported: Yes");
 				offset++;
 				break;
 			}
@@ -507,9 +511,9 @@ proto_register_rtpproxy(void)
 			{
 				"Ok",
 				"rtpproxy.ok",
-				FT_STRING,
-				BASE_NONE,
-				NULL,
+				FT_UINT8,
+				BASE_DEC,
+				VALS(oktypenames),
 				0x0,
 				NULL,
 				HFILL
@@ -520,9 +524,9 @@ proto_register_rtpproxy(void)
 			{
 				"Version Ok",
 				"rtpproxy.version_ok",
-				FT_STRING,
-				BASE_NONE,
-				NULL,
+				FT_UINT8,
+				BASE_DEC,
+				VALS(oktypenames),
 				0x0,
 				NULL,
 				HFILL
