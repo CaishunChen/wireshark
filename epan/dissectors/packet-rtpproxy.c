@@ -96,6 +96,11 @@ static const value_string errortypenames[] = {
 	{ 0, NULL }
 };
 
+static const value_string flowcontroltypenames[] = {
+	{ '\n', "LF (optional)"},
+	{ 0, NULL }
+};
+
 static gint ett_rtpproxy = -1;
 
 static gint ett_rtpproxy_request = -1;
@@ -435,10 +440,9 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		default:
 			break;
 	}
-	new_offset = tvb_find_guint8(tvb, offset, -1, '\n');
-	if (new_offset != -1){
-		ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, new_offset, -1, ENC_NA);
-		proto_item_set_text(ti, "LF (optional)");
+	/* FIXME don'walk through this line twice */
+	if (tvb_find_guint8(tvb, offset, -1, '\n') != -1){
+		proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, realsize - 1, 1, ENC_NA);
 	}
 }
 
@@ -778,9 +782,9 @@ proto_register_rtpproxy(void)
 			{
 				"LF",
 				"rtpproxy.lf",
-				FT_STRING,
-				BASE_NONE,
-				NULL,
+				FT_UINT8,
+				BASE_DEC,
+				VALS(flowcontroltypenames),
 				0x0,
 				NULL,
 				HFILL
