@@ -166,16 +166,21 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	/* Skip whitespace */
 	offset = tvb_skip_wsp(tvb, offset+1, -1);
 
-	if (tvb_find_guint8(tvb, offset, -1, '\n') == -1){
-		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
-		rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - offset);
-		realsize = tvb_reported_length(tvb);
+	/* Calculate size to prevent recalculation in the future */
+	realsize = tvb_reported_length(tvb);
+
+	/* Check for LF (required for TCP connection, optional for UDP) */
+	if (tvb_get_guint8(tvb, realsize - 1) == '\n'){
+		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
+		/* Don't count trailing LF */
+		realsize -= 1;
 	}
 	else{
-		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
-		rawstr = tvb_get_ephemeral_string(tvb, offset, tvb_reported_length(tvb) - (offset+1));
-		realsize = tvb_reported_length(tvb) - 1;
+		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
 	}
+
+	/* Get payload string */
+	rawstr = tvb_get_ephemeral_string(tvb, offset, realsize - offset);
 
 	/* Extract command */
 	tmp = g_ascii_tolower(tvb_get_guint8(tvb, offset));
