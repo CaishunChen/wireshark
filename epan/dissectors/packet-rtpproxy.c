@@ -200,7 +200,8 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case 'd':
 		case 'p':
 		case 's':
-			/* A specific case - Status answer */
+			/* A specific case - long statistics answer */
+			/* %COOKIE% sessions created %NUM0% active sessions: %NUM1% */
 			if ('e' == tvb_get_guint8(tvb, offset+1)){
 				col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
 				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
@@ -246,6 +247,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			}
 
 			/* Extract parameters */
+			/* Parameters should be right after the command and before EOL (in case of Info command) or before whitespace */
 			new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
 
 			if(new_offset == -1)
@@ -351,6 +353,8 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			}
 			break;
 		case 'a':
+			/* A specific case - short statistics answer */
+			/* %COOKIE% active sessions: %NUM1% */
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
 
