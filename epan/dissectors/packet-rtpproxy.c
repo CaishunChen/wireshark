@@ -234,8 +234,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			/* Another specific case - query information */
 			if (tmp == 'i'){
 				/* Check for 'brief' parameter */
-				new_offset = tvb_find_guint8(tvb, offset, -1, 'b');
-				if(new_offset != -1){
+				if(tvb_find_guint8(tvb, offset, -1, 'b') != -1){
 					rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
 					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command_parameters, tvb, offset+1, 1, ENC_ASCII);
 					rtpproxy_tree = proto_item_get_parent(ti);
