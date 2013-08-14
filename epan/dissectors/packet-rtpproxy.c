@@ -203,12 +203,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
 
 				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-
-				new_offset = tvb_find_guint8(tvb, offset, -1, '\n');
-				if(new_offset == -1)
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, -1, ENC_NA);
-				else
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, new_offset - offset, ENC_NA);
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, realsize - offset, ENC_NA);
 				break;
 			}
 		case 'v':
@@ -358,12 +353,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
 
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-
-			new_offset = tvb_find_guint8(tvb, offset, -1, '\n');
-			if(new_offset == -1)
-				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, -1, ENC_NA);
-			else
-				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, new_offset - offset, ENC_NA);
+			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, realsize - offset, ENC_NA);
 			break;
 		case '0':
 		case '1':
