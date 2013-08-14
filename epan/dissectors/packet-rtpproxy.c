@@ -88,9 +88,12 @@ static const value_string oktypenames[] = {
 };
 
 static const value_string errortypenames[] = {
-	{ 1, "Syntax" },
-	{ 7, "Software" },
-	{ 8, "Not Found" },
+	{ 17713, "Syntax" },	/* E1 */
+	{ 17719, "Software" },	/* E7 */
+	{ 17720, "Not Found" },	/* E8 */
+	{ 25905, "Syntax" },	/* e1 */
+	{ 25911, "Software" },	/* e7 */
+	{ 25912, "Not Found" },	/* e8 */
 	{ 0, NULL }
 };
 
@@ -399,9 +402,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, 2, ENC_NA);
-			tmp = tvb_get_guint8(tvb, offset+1) - 48;
-			proto_item_set_text(ti, "Error type: %s", val_to_str(tmp, errortypenames, "Unknown (0x%02x)"));
+			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, 2, ENC_NA);
 			break;
 		default:
 			break;
@@ -460,9 +461,9 @@ proto_register_rtpproxy(void)
 			{
 				"Error",
 				"rtpproxy.error",
-				FT_STRING,
-				BASE_NONE,
-				NULL,
+				FT_UINT16,
+				BASE_DEC,
+				VALS(errortypenames),
 				0x0,
 				NULL,
 				HFILL
