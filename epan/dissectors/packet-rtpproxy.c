@@ -442,7 +442,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	}
 	/* FIXME don'walk through this line twice */
 	if (tvb_find_guint8(tvb, offset, -1, '\n') != -1){
-		proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, realsize - 1, 1, ENC_NA);
+		proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, realsize, 1, ENC_NA);
 	}
 }
 
