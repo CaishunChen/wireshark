@@ -231,9 +231,9 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				}
 				else{
 					/* Skip whitespace */
-					if ('f' == g_ascii_tolower(tvb_get_guint8(tvb, offset+1))){
-						new_offset = tvb_skip_wsp(tvb, offset+(2+1), -1);
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, offset, new_offset+8 - offset, ENC_ASCII);
+					if ('f' == g_ascii_tolower(tvb_get_guint8(tvb, offset + 1))){
+						new_offset = tvb_skip_wsp(tvb, offset + (strlen("VF ")), -1);
+						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, new_offset, strlen("YYYYMMDD"), ENC_ASCII);
 						offset = new_offset + strlen("YYYMMDD");
 					}
 				}
