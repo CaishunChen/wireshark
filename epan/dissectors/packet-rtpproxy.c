@@ -32,7 +32,6 @@ static int proto_rtpproxy = -1;
 
 static int hf_rtpproxy_cookie = -1;
 static int hf_rtpproxy_error = -1;
-static int hf_rtpproxy_version_ok = -1;
 static int hf_rtpproxy_status = -1;
 static int hf_rtpproxy_ok = -1;
 static int hf_rtpproxy_ipv4 = -1;
@@ -53,7 +52,6 @@ static int hf_rtpproxy_notify_tag = -1;
 static int hf_rtpproxy_tag = -1;
 static int hf_rtpproxy_mediaid = -1;
 static int hf_rtpproxy_reply = -1;
-static int hf_rtpproxy_handshake = -1;
 static int hf_rtpproxy_version_request = -1;
 static int hf_rtpproxy_version_supported = -1;
 
@@ -227,7 +225,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			/* A specific case - version */
 			if (tmp == 'v'){
 				if (offset + strlen("VF YYYMMDD") > realsize){
-					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_handshake, tvb, offset, 1, ENC_ASCII);
+					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command, tvb, offset, 1, ENC_ASCII);
 					/* Skip 'V' */
 					offset++;
 				}
@@ -403,7 +401,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				break;
 			}
 			if ((tmp == '1') && ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
-				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_ok, tvb, offset, 1, ENC_ASCII);
+				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII);
 				offset++;
 				break;
 			}
@@ -466,19 +464,6 @@ proto_register_rtpproxy(void)
 			}
 		},
 		{
-			&hf_rtpproxy_handshake,
-			{
-				"Handshake",
-				"rtpproxy.handshake",
-				FT_UINT8,
-				BASE_DEC,
-				VALS(commandtypenames),
-				0x0,
-				NULL,
-				HFILL
-			}
-		},
-		{
 			&hf_rtpproxy_version_request,
 			{
 				"Version Request",
@@ -522,19 +507,6 @@ proto_register_rtpproxy(void)
 			{
 				"Ok",
 				"rtpproxy.ok",
-				FT_UINT8,
-				BASE_DEC,
-				VALS(oktypenames),
-				0x0,
-				NULL,
-				HFILL
-			}
-		},
-		{
-			&hf_rtpproxy_version_ok,
-			{
-				"Version Ok",
-				"rtpproxy.version_ok",
 				FT_UINT8,
 				BASE_DEC,
 				VALS(oktypenames),
