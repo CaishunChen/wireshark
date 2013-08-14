@@ -218,22 +218,20 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_request, tvb, offset, -1, ENC_NA);
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_request);
 
-			/* A specific case - version */
-			if (tmp == 'v'){
-				if (offset + strlen("VF YYYMMDD") > realsize)
-					ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command, tvb, offset, 1, ENC_ASCII);
-				else{
-					/* Skip whitespace */
-					if ('f' == g_ascii_tolower(tvb_get_guint8(tvb, offset + 1))){
-						new_offset = tvb_skip_wsp(tvb, offset + (strlen("VF ")), -1);
-						proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, new_offset, strlen("YYYYMMDD"), ENC_ASCII);
-					}
-				}
+			/* A specific case - version request */
+			if ((tmp == 'v') && (offset + strlen("VF YYYMMDD") + 1 == realsize)){
+				/* Skip whitespace */
+				new_offset = tvb_skip_wsp(tvb, offset + (strlen("VF") + 1), -1);
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_request, tvb, new_offset, strlen("YYYYMMDD"), ENC_ASCII);
 				break;
 			}
 
 			/* All other commands */
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command, tvb, offset, 1, ENC_NA);
+
+			/* A specific case - handshake/ping */
+			if (tmp == 'v')
+				break; /* No more parameters */
 
 			/* Extract parameters */
 			/* Parameters should be right after the command and before EOL (in case of Info command) or before whitespace */
