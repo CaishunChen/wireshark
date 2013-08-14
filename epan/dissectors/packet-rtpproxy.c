@@ -780,20 +780,16 @@ proto_reg_handoff_rtpproxy(void)
 	}
 
 	/* Register TCP port for dissection */
-	if(old_rtpproxy_tcp_port != 0 && old_rtpproxy_tcp_port != rtpproxy_tcp_port){
+	if(old_rtpproxy_tcp_port != 0 && old_rtpproxy_tcp_port != rtpproxy_tcp_port)
 		dissector_delete_uint("tcp.port", old_rtpproxy_tcp_port, rtpproxy_tcp_handle);
-	}
-	if(rtpproxy_tcp_port != 0 && old_rtpproxy_tcp_port != rtpproxy_tcp_port) {
+	if(rtpproxy_tcp_port != 0 && old_rtpproxy_tcp_port != rtpproxy_tcp_port)
 		dissector_add_uint("tcp.port", rtpproxy_tcp_port, rtpproxy_tcp_handle);
-	}
 	old_rtpproxy_tcp_port = rtpproxy_tcp_port;
 
 	/* Register UDP port for dissection */
-	if(old_rtpproxy_udp_port != 0 && old_rtpproxy_udp_port != rtpproxy_udp_port){
+	if(old_rtpproxy_udp_port != 0 && old_rtpproxy_udp_port != rtpproxy_udp_port)
 		dissector_delete_uint("udp.port", old_rtpproxy_udp_port, rtpproxy_udp_handle);
-	}
-	if(rtpproxy_udp_port != 0 && old_rtpproxy_udp_port != rtpproxy_udp_port) {
+	if(rtpproxy_udp_port != 0 && old_rtpproxy_udp_port != rtpproxy_udp_port)
 		dissector_add_uint("udp.port", rtpproxy_udp_port, rtpproxy_udp_handle);
-	}
 	old_rtpproxy_udp_port = rtpproxy_udp_port;
 }
