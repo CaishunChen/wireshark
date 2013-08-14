@@ -85,7 +85,7 @@ static const value_string commandtypenames[] = {
 
 static const value_string oktypenames[] = {
 	{ '0', "Ok"},
-	{ '1', "Protocol Supported"},
+	{ '1', "Version Supported"},
 	{ 0, NULL }
 };
 
