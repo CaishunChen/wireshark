@@ -95,7 +95,7 @@ static const value_string errortypenames[] = {
 };
 
 static const value_string flowcontroltypenames[] = {
-	{ '\n', "LF (optional)"},
+	{ '\n', "Yes (optional)"},
 	{ 0, NULL }
 };
 
@@ -148,6 +148,7 @@ rtpptoxy_add_tag(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint re
 static void
 dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
+	gboolean has_lf = FALSE;
 	guint offset = 0;
 	gint new_offset = 0;
 	guint tmp;
@@ -177,6 +178,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy");
 		/* Don't count trailing LF */
 		realsize -= 1;
+		has_lf = TRUE;
 	}
 	else{
 		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
@@ -438,10 +440,8 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		default:
 			break;
 	}
-	/* FIXME don'walk through this line twice */
-	if (tvb_find_guint8(tvb, offset, -1, '\n') != -1){
+	if (has_lf)
 		proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, realsize, 1, ENC_NA);
-	}
 }
 
 void
