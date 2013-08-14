@@ -193,12 +193,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 	tmp = g_ascii_tolower(tvb_get_guint8(tvb, offset));
 	switch (tmp)
 	{
-		case 'i':
-		case 'x':
-		case 'u':
-		case 'l':
-		case 'd':
-		case 'p':
 		case 's':
 			/* A specific case - long statistics answer */
 			/* %COOKIE% sessions created %NUM0% active sessions: %NUM1% */
@@ -210,6 +204,12 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, realsize - offset, ENC_NA);
 				break;
 			}
+		case 'i':
+		case 'x':
+		case 'u':
+		case 'l':
+		case 'd':
+		case 'p':
 		case 'v':
 		case 'r':
 		case 'c':
@@ -233,12 +233,13 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			if (tmp == 'v')
 				break; /* No more parameters */
 
+			/* A specific case - close all calls */
+			if (tmp == 'x')
+				break; /* No more parameters */
+
 			/* Extract parameters */
 			/* Parameters should be right after the command and before EOL (in case of Info command) or before whitespace */
-			new_offset = (tmp == 'i' ? (realsize - 1 > offset ? offset + strlen("Ib") : -1) : tvb_find_guint8(tvb, offset, -1, ' '));
-
-			if(new_offset == -1)
-				break; /* No more parameters */
+			new_offset = (tmp == 'i' ? (realsize - 1 > offset ? offset + strlen("Ib") : offset + strlen("I")) : tvb_find_guint8(tvb, offset, -1, ' '));
 
 			if (new_offset != (gint)offset + 1){
 				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
