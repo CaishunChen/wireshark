@@ -202,7 +202,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			if ('e' == tvb_get_guint8(tvb, offset+1)){
 				col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
 				ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-				proto_item_set_text(ti, "Reply");
 
 				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
 
@@ -221,7 +220,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case 'q':
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Request: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_request, tvb, offset, -1, ENC_NA);
-			proto_item_set_text(ti, "Request");
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_request);
 
 			/* A specific case - version */
@@ -369,7 +367,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case 'a':
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-			proto_item_set_text(ti, "Reply");
 
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
 
@@ -393,7 +390,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case '9':
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-			proto_item_set_text(ti, "Reply");
 
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
 
@@ -430,7 +426,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case 'e':
 			col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-			proto_item_set_text(ti, "Error Reply");
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
 			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, 2, ENC_NA);
 			tmp = tvb_get_guint8(tvb, offset+1) - 48;
@@ -572,7 +567,7 @@ proto_register_rtpproxy(void)
 			{
 				"Request",
 				"rtpproxy.request",
-				FT_STRING,
+				FT_NONE,
 				BASE_NONE,
 				NULL,
 				0x0,
@@ -741,7 +736,7 @@ proto_register_rtpproxy(void)
 			{
 				"Reply",
 				"rtpproxy.reply",
-				FT_STRING,
+				FT_NONE,
 				BASE_NONE,
 				NULL,
 				0x0,
