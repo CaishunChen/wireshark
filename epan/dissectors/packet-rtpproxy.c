@@ -95,7 +95,7 @@ static const value_string errortypenames[] = {
 };
 
 static const value_string flowcontroltypenames[] = {
-	{ '\n', "Yes (optional)"},
+	{ '\n', "Yes"},
 	{ 0, NULL }
 };
 
