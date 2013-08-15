@@ -88,12 +88,9 @@ static const value_string oktypenames[] = {
 };
 
 static const value_string errortypenames[] = {
-	{ 17713, "Syntax" },	/* E1 */
-	{ 17719, "Software" },	/* E7 */
-	{ 17720, "Not Found" },	/* E8 */
-	{ 25905, "Syntax" },	/* e1 */
-	{ 25911, "Software" },	/* e7 */
-	{ 25912, "Not Found" },	/* e8 */
+	{ '1', "Syntax" },	/* E1 */
+	{ '7', "Software" },	/* E7 */
+	{ '8', "Not Found" },	/* E8 */
 	{ 0, NULL }
 };
 
@@ -345,14 +342,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 			}
 			break;
 		case 'a':
-			/* A specific case - short statistics answer */
-			/* %COOKIE% active sessions: %NUM1% */
-			col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
-			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-
-			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, realsize - offset, ENC_NA);
-			break;
+		case 'e':
 		case '0':
 		case '1':
 		case '2':
@@ -363,11 +353,25 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 		case '7':
 		case '8':
 		case '9':
-			col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
-			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
+			if (tmp == 'e')
+				col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
+			else
+				col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
 
+			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
 			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
 
+			if (tmp == 'e'){
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset+1, 1, ENC_ASCII);
+				break;
+			}
+
+			if (tmp == 'a'){
+				/* A specific case - short statistics answer */
+				/* %COOKIE% active sessions: %NUM1% */
+				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, realsize - offset, ENC_NA);
+				break;
+			}
 			if ((tmp == '0')&& ((tvb_reported_length(tvb) == offset+1)||(tvb_reported_length(tvb) == offset+2))){
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII);
 				break;
@@ -393,12 +397,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ENC_ASCII);
 			else
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, ENC_ASCII);
-			break;
-		case 'e':
-			col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
-			ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-			rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, 2, ENC_NA);
 			break;
 		default:
 			break;
@@ -457,7 +455,7 @@ proto_register_rtpproxy(void)
 			{
 				"Error",
 				"rtpproxy.error",
-				FT_UINT16,
+				FT_UINT8,
 				BASE_DEC,
 				VALS(errortypenames),
 				0x0,
