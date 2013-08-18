@@ -1004,6 +1004,7 @@ DISSECTOR_SRC = \
 	packet-rtp-events.c	\
 	packet-rtp-midi.c	\
 	packet-rtp.c		\
+	packet-rtpproxy.c	\
 	packet-rtps.c		\
 	packet-rtsp.c		\
 	packet-rudp.c		\
