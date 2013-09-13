@@ -49,6 +49,9 @@ EXTRA_PROGRAMS = wireshark-gtk wireshark tshark tfshark capinfos captype editcap
 	mergecap dftest randpkt text2pcap dumpcap reordercap rawshark androiddump \
 	echld_test
 
+autoconfigdir = $(datadir)/aclocal
+autoconfig_DATA = wireshark.m4
+
 #
 # Wireshark configuration files are put in $(pkgdatadir).
 #

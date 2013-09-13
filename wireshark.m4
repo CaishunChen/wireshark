@@ -2,7 +2,7 @@ dnl AM_PATH_WIRESHARK([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]
 dnl Test for wireshark development files, and define WIRESHARK_CFLAGS,
 dnl	WIRESHARK_LIBS and WIRESHARK_VERSION.
 dnl
-AC_DEFUN([AM_PATH_WIRESHARK],[ 
+AC_DEFUN([AM_PATH_WIRESHARK],[
 	AC_ARG_WITH(wireshark-prefix,
 	    [  --with-wireshark-prefix=PFX  Prefix where wireshark libraries are installed (optional)],
 	    wireshark_config_prefix="$withval", wireshark_config_prefix="")
@@ -34,7 +34,7 @@ AC_DEFUN([AM_PATH_WIRESHARK],[
 #include <epan/packet.h>
 #include <epan/prefs.h>
 
-int 
+int
 main()
 
 {
@@ -78,7 +78,7 @@ main()
 #include <epan/prefs.h>
 ], [puts(epan_get_version());])], [WIRESHARK_VERSION=`./conftest$ac_exeext`],
 wireshark_found=no)
-		
+
 		AC_LANG_POP
 	fi
 
@@ -87,7 +87,7 @@ wireshark_found=no)
 
 	if test "$wireshark_found" != no; then
 		AC_MSG_RESULT(yes)
-		ifelse([$2],, :, [$2])     
+		ifelse([$2],, :, [$2])
 	else
 		AC_MSG_RESULT(no)
 		WIRESHARK_CFLAGS=""
