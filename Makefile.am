@@ -53,6 +53,9 @@ EXTRA_PROGRAMS = wireshark tshark capinfos editcap mergecap dftest \
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = wireshark.pc
 
+autoconfigdir = $(datadir)/aclocal
+autoconfig_DATA = wireshark.m4
+
 #
 # Wireshark configuration files are put in $(pkgdatadir).
 #
