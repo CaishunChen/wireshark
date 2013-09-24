@@ -74,6 +74,8 @@
 
 #include <wiretap/wtap.h>   /* for WTAP_ERR_SHORT_WRITE */
 
+#include <wsutil/wstmpdir.h> /* for get_tmp_dir() */
+
 #define PROFILES_DIR    "profiles"
 #define PLUGINS_DIR_NAME    "plugins"
 
@@ -1574,7 +1576,7 @@ deletefile(const char *path)
  */
 char *get_tempfile_path(const char *filename)
 {
-    return g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", g_get_tmp_dir(), filename);
+    return g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", get_tmp_dir(), filename);
 }
 
 /*
