@@ -44,6 +44,8 @@
 #include <epan/strutil.h>
 #include <epan/proto.h>
 
+#include <wsutil/wstmpdir.h> /* for get_tmp_dir() */
+
 #include "ui/gtk/proto_help.h"
 
 /*
@@ -162,7 +164,7 @@ void proto_help_init(void)
 	/* Start loop */
 
 #ifdef PH_DEBUG_LOG
-	ph_log_path = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", g_get_tmp_dir(), PH_FILE_LOG);
+	ph_log_path = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s", get_tmp_dir(), PH_FILE_LOG);
 #endif
 
 	for (i = 0; i < PH_CONF_DIRS; i++) {
