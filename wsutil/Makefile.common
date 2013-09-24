@@ -62,7 +62,8 @@ LIBWSUTIL_SRC = 	\
 	time_util.c	\
 	type_util.c	\
 	u3.c		\
-	unicode-utils.c
+	unicode-utils.c \
+	wstmpdir.c
 
 # Header files that are not generated from other files
 LIBWSUTIL_INCLUDES = 	\
@@ -104,4 +105,5 @@ LIBWSUTIL_INCLUDES = 	\
 	time_util.h	\
 	type_util.h	\
 	u3.h		\
-	unicode-utils.h
+	unicode-utils.h \
+	wstmpdir.h
