@@ -50,6 +50,7 @@
 
 #include "tempfile.h"
 #include <wsutil/file_util.h>
+#include <wsutil/wstmpdir.h>    /* For get_tmp_dir() */
 
 #ifndef __set_errno
 #define __set_errno(x) errno=(x)
@@ -203,7 +204,7 @@ create_tempfile(char **namebuf, const char *pfx)
 	/*
 	 * We can't use get_tempfile_path here because we're called from dumpcap.c.
 	 */
-	tmp_dir = g_get_tmp_dir();
+	tmp_dir = get_tmp_dir();
 
 #ifdef _WIN32
 	_tzset();
@@ -237,7 +238,7 @@ create_tempfile(char **namebuf, const char *pfx)
 
 /**
  * Create a directory with the given prefix (e.g. "wireshark"). The path
- * is created using g_get_tmp_dir and mkdtemp.
+ * is created using get_tmp_dir and mkdtemp.
  *
  * @param namebuf
  * @param pfx A prefix for the temporary directory.
@@ -265,7 +266,7 @@ create_tempdir(char **namebuf, const char *pfx)
 	/*
 	 * We can't use get_tempfile_path here because we're called from dumpcap.c.
 	 */
-	tmp_dir = g_get_tmp_dir();
+	tmp_dir = get_tmp_dir();
 
 	while (g_snprintf(td_path[idx], td_path_len[idx], "%s%c%s" TMP_FILE_SUFFIX, tmp_dir, G_DIR_SEPARATOR, pfx) > td_path_len[idx]) {
 		td_path_len[idx] *= 2;
