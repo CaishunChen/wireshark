@@ -43,7 +43,8 @@ LIBWSUTIL_SRC = 	\
 	mpeg-audio.c	\
 	privileges.c	\
 	str_util.c	\
-	type_util.c
+	type_util.c     \
+	wstmpdir.c
 
 # Header files that are not generated from other files
 LIBWSUTIL_INCLUDES = 	\
@@ -60,4 +61,5 @@ LIBWSUTIL_INCLUDES = 	\
 	mpeg-audio.h	\
 	privileges.h	\
 	str_util.h	\
-	type_util.h
+	type_util.h     \
+	wstmpdir.h
