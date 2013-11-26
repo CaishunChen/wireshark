@@ -41,8 +41,11 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>       /* needed to define AF_ values on Windows */
+#endif
 #ifdef NEED_INET_V6DEFS_H
-# include "wsutil/inet_v6defs.h"
+#include "wsutil/inet_v6defs.h"
 #endif
 
 /* For setting up RTP/RTCP dissectors based on the RTPproxy's answers */
