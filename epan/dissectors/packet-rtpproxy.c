@@ -951,7 +951,7 @@ proto_register_rtpproxy(void)
 				"rtpproxy.command_parameter_proto",
 				FT_UINT8,
 				BASE_DEC,
-				VALS(acctypenames),
+				VALS(prototypenames),
 				0x0,
 				NULL,
 				HFILL
