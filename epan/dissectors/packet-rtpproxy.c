@@ -268,7 +268,7 @@ rtpproxy_add_tag(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint re
 }
 
 void
-rtpptoxy_add_parameter(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint8* rawstr, guint begin, guint realsize)
+rtpproxy_add_parameter(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint8* rawstr, guint begin, guint realsize)
 {
 	proto_item *ti;
 	proto_tree *another_tree = NULL;
@@ -347,7 +347,7 @@ rtpptoxy_add_parameter(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint8* rawstr,
 			break;
 	}
 
-	rtpptoxy_add_parameter(rtpproxy_tree, tvb, rawstr+offset, begin + offset, realsize - offset);
+	rtpproxy_add_parameter(rtpproxy_tree, tvb, rawstr+offset, begin + offset, realsize - offset);
 }
 
 void
@@ -540,7 +540,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 			if (new_offset != offset + 1){
 				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
 				ti2 = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command_parameters, tvb, offset+1, new_offset - (offset+1), ENC_ASCII | ENC_NA);
-				rtpptoxy_add_parameter(proto_item_add_subtree(ti2, ett_rtpproxy_command_parameters), tvb, tvb_get_string(wmem_packet_scope(), tvb, offset+1, new_offset - (offset+1)), offset+1, new_offset - (offset+1));
+				rtpproxy_add_parameter(proto_item_add_subtree(ti2, ett_rtpproxy_command_parameters), tvb, tvb_get_string(wmem_packet_scope(), tvb, offset+1, new_offset - (offset+1)), offset+1, new_offset - (offset+1));
 				rtpproxy_tree = proto_item_get_parent(ti);
 			}
 
