@@ -163,7 +163,8 @@ static const value_string paramtypenames[] = {
 	{'t', "Transcode to (unofficial extension)"},
 	{'T', "Transcode to (unofficial extension)"},
 	{'v', "Accounting (unofficial extension)"},
-	{'V', "Accounting (unofficial extension)"}
+	{'V', "Accounting (unofficial extension)"},
+	{0, NULL}
 };
 
 static const value_string prototypenames[] = {
