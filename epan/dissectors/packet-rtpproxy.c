@@ -561,14 +561,14 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 				inet_pton(AF_INET, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, tmp), &ipaddr);
 				addr.type = AT_IPv4;
 				addr.len  = 4;
-				addr.data = wmem_memdup(wmem_file_scope(), &ipaddr, 4);
+				addr.data = wmem_memdup(wmem_packet_scope(), &ipaddr, 4);
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ENC_ASCII | ENC_NA);
 			}
 			else{
 				inet_pton(AF_INET6, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, tmp), &ipaddr);
 				addr.type = AT_IPv6;
 				addr.len  = 16;
-				addr.data = wmem_memdup(wmem_file_scope(), &ipaddr, 16);
+				addr.data = wmem_memdup(wmem_packet_scope(), &ipaddr, 16);
 				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, ENC_ASCII | ENC_NA);
 			}
 
