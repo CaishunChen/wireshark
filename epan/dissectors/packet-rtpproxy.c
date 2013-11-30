@@ -717,7 +717,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 
 			if(rtpproxy_info && rtpproxy_info->callid){
 				ti = proto_tree_add_string(rtpproxy_tree, hf_rtpproxy_callid, tvb, offset, 0, rtpproxy_info->callid);
-				proto_item_append_text(ti, " (virtual field generated from the request)");
+				PROTO_ITEM_SET_GENERATED(ti);
 			}
 
 			if (tmp == 'e'){
