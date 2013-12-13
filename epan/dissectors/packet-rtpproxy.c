@@ -41,6 +41,9 @@
 #include <epan/expert.h>
 #include <epan/rtp_pt.h>
 
+#include <epan/exceptions.h>
+#include <epan/show_exception.h>
+
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -72,8 +75,8 @@ static int hf_rtpproxy_command = -1;
 static int hf_rtpproxy_command_parameters = -1;
 static int hf_rtpproxy_command_parameter = -1;
 static int hf_rtpproxy_command_parameter_codec = -1;
-static int hf_rtpproxy_command_parameter_local = -1;
-static int hf_rtpproxy_command_parameter_remote = -1;
+static int hf_rtpproxy_command_parameter_local_ipv4 = -1;
+static int hf_rtpproxy_command_parameter_remote_ipv4 = -1;
 static int hf_rtpproxy_command_parameter_repacketize = -1;
 static int hf_rtpproxy_command_parameter_dtmf = -1;
 /* static int hf_rtpproxy_command_parameter_cmap = -1; TODO */
@@ -301,7 +304,7 @@ rtpproxy_add_tag(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint re
 }
 
 static void
-rtpproxy_add_parameter(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint realsize)
+rtpproxy_add_parameter(tvbuff_t *tvb, packet_info *pinfo, proto_tree *rtpproxy_tree, guint begin, guint realsize)
 {
 	proto_item *ti;
 	proto_tree *another_tree = NULL;
@@ -312,6 +315,7 @@ rtpproxy_add_parameter(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, gu
 	gchar** codecs = NULL;
 	guint codec_len;
 	guint8* rawstr = NULL;
+	guint32 ipaddr[4]; /* Enough room for IPv4 or IPv6 */
 
 	/* Extract the entire parameters line. */
 	/* Something like "t4p1iic8,0,2,4,18,96,97,98,100,101" */
@@ -344,13 +348,19 @@ rtpproxy_add_parameter(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, gu
 			case 'l':
 				new_offset = (gint)strspn(rawstr+offset, "0123456789.");
 				another_tree = proto_item_add_subtree(ti, ett_rtpproxy_command_parameters_local);
-				proto_tree_add_item(another_tree, hf_rtpproxy_command_parameter_local, tvb, begin+offset, new_offset, ENC_ASCII | ENC_NA);
+				if(inet_pton(AF_INET, (char*)tvb_get_string(wmem_packet_scope(), tvb, begin+offset, new_offset), ipaddr))
+					proto_tree_add_ipv4(another_tree, hf_rtpproxy_command_parameter_local_ipv4, tvb, begin+offset, new_offset, ipaddr[0]);
+				else
+					show_exception(tvb, pinfo, another_tree, DissectorError, "Bogus IPv4");
 				offset += new_offset;
 				break;
 			case 'r':
 				new_offset = (gint)strspn(rawstr+offset, "0123456789.");
 				another_tree = proto_item_add_subtree(ti, ett_rtpproxy_command_parameters_remote);
-				proto_tree_add_item(another_tree, hf_rtpproxy_command_parameter_remote, tvb, begin+offset, new_offset, ENC_ASCII | ENC_NA);
+				if(inet_pton(AF_INET, (char*)tvb_get_string(wmem_packet_scope(), tvb, begin+offset, new_offset), ipaddr))
+					proto_tree_add_ipv4(another_tree, hf_rtpproxy_command_parameter_remote_ipv4, tvb, begin+offset, new_offset, ipaddr[0]);
+				else
+					show_exception(tvb, pinfo, another_tree, DissectorError, "Bogus IPv4");
 				offset += new_offset;
 				break;
 			case 'z':
@@ -444,11 +454,12 @@ rtpproxy_add_tid(gboolean is_request, tvbuff_t *tvb, packet_info *pinfo, proto_t
 }
 
 static void
-rtpproxy_add_notify_addr(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, guint end)
+rtpproxy_add_notify_addr(tvbuff_t *tvb, packet_info *pinfo, proto_tree *rtpproxy_tree, guint begin, guint end)
 {
 	gint offset = 0;
 	gint tmp = 0;
 	gboolean ipv6 = FALSE;
+	guint32 ipaddr[4]; /* Enough room for IPv4 or IPv6 */
 	proto_item *ti;
 
 	/* Check for at least one colon */
@@ -460,17 +471,28 @@ rtpproxy_add_notify_addr(proto_tree *rtpproxy_tree, tvbuff_t *tvb, guint begin, 
 			offset = tmp;
 		}
 		/* We have ip:port */
-		if(ipv6)
-			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv6, tvb, begin, offset - begin, ENC_ASCII | ENC_NA);
-		else
-			proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, begin, offset - begin, ENC_ASCII | ENC_NA);
+		if(ipv6){
+			if(inet_pton(AF_INET6, (char*)tvb_get_string(wmem_packet_scope(), tvb, begin, offset - begin), ipaddr))
+				proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_notify_ipv6, tvb, begin, offset - begin, (const guint8 *)ipaddr);
+			else
+				show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv6");
+		}
+		else{
+			if(inet_pton(AF_INET, (char*)tvb_get_string(wmem_packet_scope(), tvb, begin, offset - begin), ipaddr))
+				proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, begin, offset - begin, ipaddr[0]);
+			else
+				show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv4");
+		}
 		proto_tree_add_uint(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, offset+1, end - (offset+1),
 			(guint16) g_ascii_strtoull((gchar*)tvb_get_string(wmem_packet_scope(), tvb, offset+1, end - (offset+1)), NULL, 10));
 	}
 	else{
-		/* Only port is supplied */
-		ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, begin, 0, ENC_ASCII | ENC_NA);
-		proto_item_append_text(ti, "<skipped>");
+		/* Only port is supplied - take IPv4/IPv6 from  ip.src/ipv6.src respectively */
+		expert_add_info(pinfo, rtpproxy_tree, &ei_rtpproxy_notify_no_ip);
+		if (pinfo->src.type == AT_IPv4)
+			ti = proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, begin, 0, ((guint32*)(pinfo->src.data))[0]);
+		else
+			ti = proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_notify_ipv6, tvb, begin, 0, (const guint8 *)(pinfo->src.data));
 		PROTO_ITEM_SET_GENERATED(ti);
 		proto_tree_add_uint(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, begin, end - begin,
 			(guint16) g_ascii_strtoull((gchar*)tvb_get_string(wmem_packet_scope(), tvb, begin, end - begin), NULL, 10));
@@ -496,7 +518,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 	/* For RT(C)P setup */
 	address addr;
 	guint16 port;
-	guint32 ipaddr[4];
+	guint32 ipaddr[4]; /* Enough room for IPv4 or IPv6 */
 	rtpproxy_info_t *rtpproxy_info = NULL;
 
 	/* If it does not start with a printable character it's not RTPProxy */
@@ -606,7 +628,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 			if (new_offset != offset + 1){
 				rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_command);
 				ti2 = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_command_parameters, tvb, offset+1, new_offset - (offset+1), ENC_ASCII | ENC_NA);
-				rtpproxy_add_parameter(proto_item_add_subtree(ti2, ett_rtpproxy_command_parameters), tvb, offset+1, new_offset - (offset+1));
+				rtpproxy_add_parameter(tvb, pinfo, proto_item_add_subtree(ti2, ett_rtpproxy_command_parameters), offset+1, new_offset - (offset+1));
 				rtpproxy_tree = proto_item_get_parent(ti);
 			}
 
@@ -629,10 +651,18 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 			if ((tmp == 'u') || (tmp == 'l')){
 				/* Extract IP */
 				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-				if (tvb_find_guint8(tvb, offset, new_offset - offset, ':') == -1)
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, new_offset - offset, ENC_ASCII | ENC_NA);
-				else
-					proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, new_offset - offset, ENC_ASCII | ENC_NA);
+				if (tvb_find_guint8(tvb, offset, new_offset - offset, ':') == -1){
+					if(inet_pton(AF_INET, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, new_offset - offset), ipaddr))
+						proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, new_offset - offset, ipaddr[0]);
+					else
+						show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv4");
+				}
+				else{
+					if(inet_pton(AF_INET6, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, new_offset - offset), ipaddr))
+						proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, new_offset - offset, (const guint8 *)ipaddr);
+					else
+						show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv6");
+				}
 				/* Skip whitespace */
 				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
@@ -692,12 +722,12 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 				new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
 				if(new_offset == -1){
 					/* NotifyTag wasn't found (we should re-use Call-ID instead) */
-					rtpproxy_add_notify_addr(rtpproxy_tree, tvb, offset, realsize);
+					rtpproxy_add_notify_addr(tvb, pinfo, rtpproxy_tree, offset, realsize);
 					break; /* No more parameters */
 				}
 
 				/* NotifyTag was found */
-				rtpproxy_add_notify_addr(rtpproxy_tree, tvb, offset, new_offset);
+				rtpproxy_add_notify_addr(tvb, pinfo, rtpproxy_tree, offset, new_offset);
 				/* Skip whitespace */
 				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
@@ -766,29 +796,38 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 			offset = tvb_skip_wsp(tvb, new_offset+1, -1);
 
 			/* Extract IP */
+			memset(&addr, 0, sizeof(address));
 			tmp = tvb_find_line_end(tvb, offset, -1, &new_offset, FALSE);
 			if (tvb_find_guint8(tvb, offset, -1, ':') == -1){
-				inet_pton(AF_INET, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, tmp), ipaddr);
-				addr.type = AT_IPv4;
-				addr.len  = 4;
-				addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 4);
-				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ENC_ASCII | ENC_NA);
+				if (inet_pton(AF_INET, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, tmp), ipaddr)){
+					addr.type = AT_IPv4;
+					addr.len  = 4;
+					addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 4);
+					proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ipaddr[0]);
+				}
+				else
+					show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv4");
 			}
 			else{
-				inet_pton(AF_INET6, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, tmp), ipaddr);
-				addr.type = AT_IPv6;
-				addr.len  = 16;
-				addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 16);
-				proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, ENC_ASCII | ENC_NA);
+				if (inet_pton(AF_INET6, (char*)tvb_get_string(wmem_packet_scope(), tvb, offset, tmp), ipaddr)){
+					addr.type = AT_IPv6;
+					addr.len  = 16;
+					addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 16);
+					proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, (const guint8 *)ipaddr);
+				}
+				else
+					show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv6");
 			}
 
 			if(rtpproxy_establish_conversation){
 				if (rtp_handle) {
 					/* FIXME tell if isn't a video stream, and setup codec mapping */
-					rtp_add_address(pinfo, &addr, port, 0, "RTPproxy", pinfo->fd->num, 0, NULL);
+					if (addr.len)
+						rtp_add_address(pinfo, &addr, port, 0, "RTPproxy", pinfo->fd->num, 0, NULL);
 				}
 				if (rtcp_handle) {
-					rtcp_add_address(pinfo, &addr, port+1, 0, "RTPproxy", pinfo->fd->num);
+					if (addr.len)
+						rtcp_add_address(pinfo, &addr, port+1, 0, "RTPproxy", pinfo->fd->num);
 				}
 			}
 			break;
@@ -891,7 +930,7 @@ proto_register_rtpproxy(void)
 			{
 				"IPv4",
 				"rtpproxy.ipv4",
-				FT_STRING,
+				FT_IPv4,
 				BASE_NONE,
 				NULL,
 				0x0,
@@ -904,7 +943,7 @@ proto_register_rtpproxy(void)
 			{
 				"IPv6",
 				"rtpproxy.ipv6",
-				FT_STRING,
+				FT_IPv6,
 				BASE_NONE,
 				NULL,
 				0x0,
@@ -991,11 +1030,11 @@ proto_register_rtpproxy(void)
 			}
 		},
 		{
-			&hf_rtpproxy_command_parameter_local,
+			&hf_rtpproxy_command_parameter_local_ipv4,
 			{
-				"Local IP address",
-				"rtpproxy.command_parameter_local",
-				FT_STRING,
+				"Local IPv4 address",
+				"rtpproxy.command_parameter_local_ipv4",
+				FT_IPv4, /* FIXME - is it ever possible to see IPv6 here? */
 				BASE_NONE,
 				NULL,
 				0x0,
@@ -1004,11 +1043,11 @@ proto_register_rtpproxy(void)
 			}
 		},
 		{
-			&hf_rtpproxy_command_parameter_remote,
+			&hf_rtpproxy_command_parameter_remote_ipv4,
 			{
-				"Remote IP address",
-				"rtpproxy.command_parameter_remote",
-				FT_STRING,
+				"Remote IPv4 address",
+				"rtpproxy.command_parameter_remote_ipv4",
+				FT_IPv4, /* FIXME - is it ever possible to see IPv6 here? */
 				BASE_NONE,
 				NULL,
 				0x0,
@@ -1177,7 +1216,7 @@ proto_register_rtpproxy(void)
 			{
 				"Notification IPv4",
 				"rtpproxy.notify_ipv4",
-				FT_STRING,
+				FT_IPv4,
 				BASE_NONE,
 				NULL,
 				0x0,
@@ -1190,7 +1229,7 @@ proto_register_rtpproxy(void)
 			{
 				"Notification IPv6",
 				"rtpproxy.notify_ipv6",
-				FT_STRING,
+				FT_IPv6,
 				BASE_NONE,
 				NULL,
 				0x0,
