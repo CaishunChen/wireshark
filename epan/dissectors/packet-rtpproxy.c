@@ -532,7 +532,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 		has_lf = TRUE;
 	}
 	else
-		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)");
+		col_set_str(pinfo->cinfo, COL_PROTOCOL, "RTPproxy (no LF)"); /* FIXME replace with expert info field */
 
 
 	/* Try to create conversation */
