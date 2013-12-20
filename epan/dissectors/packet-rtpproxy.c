@@ -90,6 +90,7 @@ static int hf_rtpproxy_version_supported = -1;
 
 /* Expert fields */
 static expert_field ei_rtpproxy_timeout = EI_INIT;
+static expert_field ei_rtpproxy_notify_no_ip = EI_INIT;
 
 /* Request/response tracking */
 static int hf_rtpproxy_request_in = -1;
@@ -1323,6 +1324,7 @@ proto_register_rtpproxy(void)
 
 	static ei_register_info ei[] = {
 		{ &ei_rtpproxy_timeout, { "rtpproxy.response_timeout", PI_RESPONSE_CODE, PI_WARN, "TIMEOUT", EXPFILL }},
+		{ &ei_rtpproxy_notify_no_ip, { "rtpproxy.notify_no_ip", PI_RESPONSE_CODE, PI_COMMENT, "No notification IP address provided. Using ip.src or ipv6.src as a value.", EXPFILL }},
 	};
 
 	/* Setup protocol subtree array */
