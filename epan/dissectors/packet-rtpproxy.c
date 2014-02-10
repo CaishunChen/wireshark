@@ -41,7 +41,6 @@
 #include <epan/expert.h>
 #include <epan/rtp_pt.h>
 #include <epan/exceptions.h>
-#include <epan/show_exception.h>
 #include <epan/addr_resolv.h>
 
 /* For setting up RTP/RTCP dissectors based on the RTPproxy's answers */
@@ -91,6 +90,8 @@ static int hf_rtpproxy_version_supported = -1;
 /* Expert fields */
 static expert_field ei_rtpproxy_timeout = EI_INIT;
 static expert_field ei_rtpproxy_notify_no_ip = EI_INIT;
+static expert_field ei_rtpproxy_bad_ipv4 = EI_INIT;
+static expert_field ei_rtpproxy_bad_ipv6 = EI_INIT;
 
 /* Request/response tracking */
 static int hf_rtpproxy_request_in = -1;
@@ -342,7 +343,7 @@ rtpproxy_add_parameter(tvbuff_t *tvb, packet_info *pinfo, proto_tree *rtpproxy_t
 				if(str_to_ip((char*)tvb_get_string(wmem_packet_scope(), tvb, begin+offset, new_offset), ipaddr))
 					proto_tree_add_ipv4(another_tree, hf_rtpproxy_command_parameter_local_ipv4, tvb, begin+offset, new_offset, ipaddr[0]);
 				else
-					show_exception(tvb, pinfo, another_tree, DissectorError, "Bogus IPv4");
+					proto_tree_add_expert(another_tree, pinfo, &ei_rtpproxy_bad_ipv4, tvb, begin+offset, new_offset);
 				offset += new_offset;
 				break;
 			case 'r':
@@ -351,7 +352,7 @@ rtpproxy_add_parameter(tvbuff_t *tvb, packet_info *pinfo, proto_tree *rtpproxy_t
 				if(str_to_ip((char*)tvb_get_string(wmem_packet_scope(), tvb, begin+offset, new_offset), ipaddr))
 					proto_tree_add_ipv4(another_tree, hf_rtpproxy_command_parameter_remote_ipv4, tvb, begin+offset, new_offset, ipaddr[0]);
 				else
-					show_exception(tvb, pinfo, another_tree, DissectorError, "Bogus IPv4");
+					proto_tree_add_expert(another_tree, pinfo, &ei_rtpproxy_bad_ipv4, tvb, begin+offset, new_offset);
 				offset += new_offset;
 				break;
 			case 'z':
@@ -466,13 +467,13 @@ rtpproxy_add_notify_addr(tvbuff_t *tvb, packet_info *pinfo, proto_tree *rtpproxy
 			if(str_to_ip6((char*)tvb_get_string(wmem_packet_scope(), tvb, begin, offset - begin), ipaddr))
 				proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_notify_ipv6, tvb, begin, offset - begin, (const guint8 *)ipaddr);
 			else
-				show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv6");
+				proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv6, tvb, begin, offset - begin);
 		}
 		else{
 			if(str_to_ip((char*)tvb_get_string(wmem_packet_scope(), tvb, begin, offset - begin), ipaddr))
 				proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_notify_ipv4, tvb, begin, offset - begin, ipaddr[0]);
 			else
-				show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv4");
+				proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv4, tvb, begin, offset - begin);
 		}
 		proto_tree_add_uint(rtpproxy_tree, hf_rtpproxy_notify_port, tvb, offset+1, end - (offset+1),
 			(guint16) g_ascii_strtoull((gchar*)tvb_get_string(wmem_packet_scope(), tvb, offset+1, end - (offset+1)), NULL, 10));
@@ -646,13 +647,13 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 					if(str_to_ip((char*)tvb_get_string(wmem_packet_scope(), tvb, offset, new_offset - offset), ipaddr))
 						proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, new_offset - offset, ipaddr[0]);
 					else
-						show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv4");
+						proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv4, tvb, offset, new_offset - offset);
 				}
 				else{
 					if(str_to_ip6((char*)tvb_get_string(wmem_packet_scope(), tvb, offset, new_offset - offset), ipaddr))
 						proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, new_offset - offset, (const guint8 *)ipaddr);
 					else
-						show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv6");
+						proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv6, tvb, offset, new_offset - offset);
 				}
 				/* Skip whitespace */
 				offset = tvb_skip_wsp(tvb, new_offset+1, -1);
@@ -797,7 +798,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 					proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ipaddr[0]);
 				}
 				else
-					show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv4");
+					proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv4, tvb, offset, tmp);
 			}
 			else{
 				if (str_to_ip6((char*)tvb_get_string(wmem_packet_scope(), tvb, offset, tmp), ipaddr)){
@@ -807,7 +808,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 					proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, (const guint8 *)ipaddr);
 				}
 				else
-					show_exception(tvb, pinfo, rtpproxy_tree, DissectorError, "Bogus IPv6");
+					proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv6, tvb, offset, tmp);
 			}
 
 			if(rtpproxy_establish_conversation){
@@ -1325,6 +1326,8 @@ proto_register_rtpproxy(void)
 	static ei_register_info ei[] = {
 		{ &ei_rtpproxy_timeout, { "rtpproxy.response_timeout", PI_RESPONSE_CODE, PI_WARN, "TIMEOUT", EXPFILL }},
 		{ &ei_rtpproxy_notify_no_ip, { "rtpproxy.notify_no_ip", PI_RESPONSE_CODE, PI_COMMENT, "No notification IP address provided. Using ip.src or ipv6.src as a value.", EXPFILL }},
+		{ &ei_rtpproxy_bad_ipv4, { "rtpproxy.bad_ipv4", PI_MALFORMED, PI_ERROR, "Bad IPv4", EXPFILL }},
+		{ &ei_rtpproxy_bad_ipv6, { "rtpproxy.bad_ipv6", PI_MALFORMED, PI_ERROR, "Bad IPv6", EXPFILL }},
 	};
 
 	/* Setup protocol subtree array */
