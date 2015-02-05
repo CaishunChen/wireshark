@@ -433,6 +433,8 @@ DIAG_ON(cast-qual)
     wtapng_iface_descriptions_t *idb_inf = NULL, *idb_inf_merge_file;
     wtapng_if_descr_t int_data, *file_int_data;
     guint itf_count, itf_id = 0;
+    guint j = 0;
+    gint isnew = 0;
 
     shb_hdr = g_new(wtapng_section_t,1);
     comment_gstr = g_string_new("File created by merging: \n");
@@ -447,7 +449,7 @@ DIAG_ON(cast-qual)
     shb_hdr->shb_os        = NULL;              /* NULL if not available, UTF-8 string containing the name of the operating system used to create this section. */
     shb_hdr->shb_user_appl = g_strdup("mergecap"); /* NULL if not available, UTF-8 string containing the name of the application used to create this section. */
 
-    if (frame_type == WTAP_ENCAP_PER_PACKET) {
+    if ((frame_type == WTAP_ENCAP_PER_PACKET) || (frame_type == WTAP_ENCAP_ETHERNET)) {
       /* create fake IDB info */
       idb_inf = g_new(wtapng_iface_descriptions_t,1);
       /* TODO make this the number of DIFFERENT encapsulation types
@@ -477,7 +479,15 @@ DIAG_ON(cast-qual)
           int_data.num_stat_entries      = 0;          /* Number of ISB:s */
           int_data.interface_statistics  = NULL;
 
-          g_array_append_val(idb_inf->interface_data, int_data);
+          /* Check if it's a new interface (just compare by a name with already appended ones) */
+          for (j = 0, isnew = TRUE; j < idb_inf->interface_data->len && isnew; j++) {
+            wtapng_if_descr_t *tmpdescr = &g_array_index (idb_inf->interface_data, wtapng_if_descr_t, j);
+            isnew = g_strcmp0(tmpdescr->if_name, int_data.if_name);
+          }
+          /* Append only if this is a new interface */
+          if (isnew) {
+            g_array_append_val(idb_inf->interface_data, int_data);
+          }
         }
         g_free(idb_inf_merge_file);
 
