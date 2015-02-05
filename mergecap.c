@@ -428,6 +428,9 @@ DIAG_ON(cast-qual)
   /* prepare the outfile */
   if(file_type == WTAP_FILE_TYPE_SUBTYPE_PCAPNG ){
     wtapng_section_t *shb_hdr;
+    wtapng_iface_descriptions_t *idb_inf;
+    guint maxnum = 0; /* Maximum number of interfaces */
+    int j = 0;
     GString *comment_gstr;
 
     shb_hdr = g_new(wtapng_section_t,1);
@@ -435,6 +438,14 @@ DIAG_ON(cast-qual)
 
     for (i = 0; i < in_file_count; i++) {
       g_string_append_printf(comment_gstr, "File%d: %s \n",i+1,in_files[i].filename);
+
+      /* Check if this is a capture with a largest number of interfaces */
+      idb_inf = wtap_file_get_idb_info(in_files[i].wth);
+      if(idb_inf->interface_data->len > maxnum){
+        maxnum = idb_inf->interface_data->len;
+        j = i;
+      }
+      g_free(idb_inf);
     }
     shb_hdr->section_length = -1;
     /* options */
@@ -443,8 +454,10 @@ DIAG_ON(cast-qual)
     shb_hdr->shb_os        = NULL;              /* NULL if not available, UTF-8 string containing the name of the operating system used to create this section. */
     shb_hdr->shb_user_appl = g_strdup("mergecap"); /* NULL if not available, UTF-8 string containing the name of the application used to create this section. */
 
+    idb_inf = wtap_file_get_idb_info(in_files[j].wth);
     pdh = wtap_dump_fdopen_ng(out_fd, file_type, frame_type, snaplen,
-                              FALSE /* compressed */, shb_hdr, NULL /* wtapng_iface_descriptions_t *idb_inf */, &open_err);
+                              FALSE /* compressed */, shb_hdr, idb_inf, &open_err);
+    g_free(idb_inf);
     g_string_free(comment_gstr, TRUE);
   } else {
     pdh = wtap_dump_fdopen(out_fd, file_type, frame_type, snaplen, FALSE /* compressed */, &open_err);
