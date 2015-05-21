@@ -150,6 +150,8 @@ static const value_string commandtypenames[] = {
     { 'c', "Copy stream"},
     { 'Q', "Query info about a session"},
     { 'q', "Query info about a session"},
+    { 'G', "Get statistics"},
+    { 'g', "Get statistics"},
     { 0, NULL }
 };
 
@@ -175,6 +177,8 @@ static const value_string paramtypenames[] = {
     {'R', "Remote address"},
     {'s', "Symmetric stream / Single file"},
     {'S', "Symmetric stream / Single file"},
+    {'v', "Verbose statistics"},
+    {'V', "Verbose statistics"},
     {'w', "Weak connection (allows roaming)"},
     {'W', "Weak connection (allows roaming)"},
     {'z', "repacketiZe"},
@@ -251,6 +255,38 @@ static const string_string errortypenames[] = {
     { "E87", "Out of memory (NOMEM_7)" },
     { "E88", "Out of memory (NOMEM_8)" },
     { "E99", "Software error: proxy is in the deorbiting-burn mode, new session rejected (SLOWSHTDN)" },
+    { 0, NULL }
+};
+
+/* https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#get-statistics */
+static const string_string statstypenames[] = {
+    { "nsess_created", "Number of RTP sessions created" },
+    { "nsess_destroyed", "Number of RTP sessions destroyed" },
+    { "nsess_timeout", "Number of RTP sessions ended due to media timeout" },
+    { "nsess_complete", "Number of RTP sessions fully setup" },
+    { "nsess_nortp", "Number of sessions that had no RTP neither in nor out" },
+    { "nsess_owrtp", "Number of sessions that had one-way RTP only" },
+    { "nsess_nortcp", "Number of sessions that had no RTCP neither in nor out" },
+    { "nsess_owrtcp", "Number of sessions that had one-way RTCP only" },
+    { "nplrs_created", "Number of RTP players created" },
+    { "nplrs_destroyed", "Number of RTP players destroyed" },
+    { "npkts_rcvd", "Total number of RTP/RTPC packets received" },
+    { "npkts_played", "Total number of RTP packets locally generated (played out)" },
+    { "npkts_relayed", "Total number of RTP/RTPC packets relayed" },
+    { "npkts_resizer_in", "Total number of RTP packets ingress into resizer (re-packetizer)" },
+    { "npkts_resizer_out", "Total number of RTP packets egress out of resizer (re-packetizer)" },
+    { "npkts_resizer_discard", "Total number of RTP packets dropped by the resizer (re-packetizer)" },
+    { "npkts_discard", "Total number of RTP/RTPC packets discarded" },
+    { "total_duration", "Cumulative duration of all sessions" },
+    { "ncmds_rcvd", "Total number of control commands received" },
+    { "ncmds_rcvd_ndups", "Total number of duplicate control commands received" },
+    { "ncmds_succd", "Total number of control commands successfully processed" },
+    { "ncmds_errs", "Total number of control commands ended up with an error" },
+    { "ncmds_repld", "Total number of control commands that had a reply generated" },
+    { "rtpa_nsent", "Total number of uniqie RTP packets sent to us based on SEQ tracking" },
+    { "rtpa_nrcvd", "Total number of unique RTP packets received by us based on SEQ tracking" },
+    { "rtpa_ndups", "Total number of duplicate RTP packets received by us based on SEQ tracking" },
+    { "rtpa_perrs", "Total number of RTP packets that failed RTP parse routine in SEQ tracking" },
     { 0, NULL }
 };
 
@@ -616,6 +652,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
                 proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, realsize - offset, ENC_ASCII | ENC_NA);
                 break;
             }
+        case 'g':
         case 'i':
         case 'x':
         case 'u':
@@ -684,6 +721,11 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
 
             /* Skip whitespace */
             offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+            /* A specific case - query statistics */
+            if (tmp == 'g') {
+                break; /* No more parameters */
+            }
 
             /* Extract Call-ID */
             new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
