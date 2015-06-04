@@ -30,6 +30,7 @@
 
 #include <stdlib.h>
 
+#include <epan/ipproto.h>
 #include <epan/packet.h>
 #include <epan/prefs.h>
 #include <epan/conversation.h>
@@ -87,6 +88,7 @@ static expert_field ei_rtpproxy_timeout = EI_INIT;
 static expert_field ei_rtpproxy_notify_no_ip = EI_INIT;
 static expert_field ei_rtpproxy_bad_ipv4 = EI_INIT;
 static expert_field ei_rtpproxy_bad_ipv6 = EI_INIT;
+static expert_field ei_rtpproxy_tcp_wo_lf = EI_INIT;
 
 /* Request/response tracking */
 static int hf_rtpproxy_request_in = -1;
@@ -523,7 +525,7 @@ rtpproxy_add_notify_addr(tvbuff_t *tvb, packet_info *pinfo, proto_tree *rtpproxy
 }
 
 static int
-dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
+dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data)
 {
     gboolean has_lf = FALSE;
     gint offset = 0;
@@ -545,6 +547,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
     guint32 ipaddr[4]; /* Enough room for IPv4 or IPv6 */
     rtpproxy_info_t *rtpproxy_info = NULL;
     tvbuff_t *subtvb;
+    ws_ip *iph = (ws_ip*)data;
 
     /* If it does not start with a printable character it's not RTPProxy */
     if(!g_ascii_isprint(tvb_get_guint8(tvb, 0)))
@@ -895,9 +898,16 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
         default:
             break;
     }
-    /* TODO add an expert warning about packets w/o LF sent over TCP */
-    if (has_lf)
+
+    if (has_lf){
         proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_lf, tvb, realsize, 1, ENC_NA);
+    } else {
+        if (iph->ip_p == IP_PROTO_UDP) {
+            /* Add an expert warning about packets w/o LF sent over TCP */
+            pi = proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_tcp_wo_lf, tvb, 0, 0);
+            PROTO_ITEM_SET_GENERATED(pi);
+        }
+    }
 
     return tvb_length(tvb);
 }
@@ -1419,6 +1429,9 @@ proto_register_rtpproxy(void)
         { &ei_rtpproxy_bad_ipv6,
           { "rtpproxy.bad_ipv6", PI_MALFORMED, PI_ERROR,
             "Bad IPv6", EXPFILL }},
+        { &ei_rtpproxy_tcp_wo_lf,
+          { "rtpproxy.tcp_wo_lf", PI_MALFORMED, PI_ERROR,
+            "ASSent over TCP w/o line feed", EXPFILL }},
     };
 
     /* Setup protocol subtree array */
