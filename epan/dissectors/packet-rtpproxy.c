@@ -522,6 +522,126 @@ rtpproxy_add_notify_addr(tvbuff_t *tvb, packet_info *pinfo, proto_tree *rtpproxy
     }
 }
 
+static void
+rtpproxy_add_reply(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, rtpproxy_conv_info_t *rtpproxy_conv, gchar* cookie, guint first_byte, const gchar *col_info_format, guint8* rawstr, gint realsize, gint old_offset)
+{
+    rtpproxy_info_t *rtpproxy_info = NULL;
+    proto_tree *rtpproxy_tree = NULL;
+    proto_item *ti;
+    gint offset = old_offset;
+    guint tmp;
+    gint new_offset = 0;
+    guint8* tmpstr;
+    /* For RT(C)P setup */
+    address addr;
+    guint16 port;
+    guint32 ipaddr[4]; /* Enough room for IPv4 or IPv6 */
+
+    rtpproxy_info = rtpproxy_add_tid(FALSE, tvb, pinfo, tree, rtpproxy_conv, cookie);
+    col_add_fstr(pinfo->cinfo, COL_INFO, col_info_format, rawstr);
+
+    ti = proto_tree_add_item(tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
+    rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
+
+    if(rtpproxy_info && rtpproxy_info->callid){
+        ti = proto_tree_add_string(rtpproxy_tree, hf_rtpproxy_callid, tvb, offset, 0, rtpproxy_info->callid);
+        PROTO_ITEM_SET_GENERATED(ti);
+    }
+
+    switch(first_byte)
+    {
+        case 'e':
+            /* https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#negative-reply */
+            tmpstr = tvb_get_string_enc(wmem_packet_scope(), tvb, offset, realsize - offset, ENC_ASCII);
+            ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, (gint)strlen(tmpstr), ENC_ASCII | ENC_NA);
+            proto_item_append_text(ti, " (%s)", str_to_str(tmpstr, errortypenames, "Unknown"));
+            break;
+        case 's':
+            /* https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#information */
+            /* FIXME */
+            break;
+        case '0':
+        case '1':
+            /* https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#positive-reply */
+            /* https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#version-reply */
+            if (realsize == offset + (gint)strlen("X")){
+                proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII | ENC_NA);
+                break;
+            }
+        case '2':
+            /* Check for the VERSION_NUMBER string reply (which always starts from '2'):
+             * https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#version-reply
+             *
+             * If a total size equals to a current offset + size of "YYYYMMDD" string
+             * then it's a version reply.
+             */
+            if (realsize == offset + (gint)strlen("YYYYMMDD")){
+                proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_supported, tvb, offset, (guint32)strlen("YYYYMMDD"), ENC_ASCII | ENC_NA);
+                break;
+            }
+            /* case 3,4,5,6,7,8,9: */
+        default:
+            /* https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#socket-allocated */
+            /* Extract Port */
+            new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
+            /* Convert port to unsigned 16-bit number */
+            port = (guint16) g_ascii_strtoull((gchar*)tvb_get_string_enc(wmem_packet_scope(), tvb, offset, new_offset - offset, ENC_ASCII), NULL, 10);
+            proto_tree_add_uint(rtpproxy_tree, hf_rtpproxy_port, tvb, offset, new_offset - offset, port);
+            /* Skip whitespace */
+            offset = tvb_skip_wsp(tvb, new_offset+1, -1);
+
+            /* Now try rtpengine bogus extension first. It inserts 4 or 6
+             * depending on type of the IP between Port and IP. See this link
+             * for further details:
+             * https://github.com/sipwise/rtpengine/blob/eea3256/daemon/call_interfaces.c#L74
+             */
+            tmp = tvb_find_guint8(tvb, offset, -1, ' ');
+            if(tmp == (guint)(-1)){
+                /* No extension - operate normally */
+                tmp = tvb_find_line_end(tvb, offset, -1, &new_offset, FALSE);
+            }
+            else {
+                tmp -= offset;
+            }
+
+            /* Extract IP */
+            memset(&addr, 0, sizeof(address));
+            if (tvb_find_guint8(tvb, offset, -1, ':') == -1){
+                if (str_to_ip((char*)tvb_get_string_enc(wmem_packet_scope(), tvb, offset, tmp, ENC_ASCII), ipaddr)){
+                    addr.type = AT_IPv4;
+                    addr.len  = 4;
+                    addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 4);
+                    proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ipaddr[0]);
+                }
+                else
+                    proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv4, tvb, offset, tmp);
+            }
+            else{
+                if (str_to_ip6((char*)tvb_get_string_enc(wmem_packet_scope(), tvb, offset, tmp, ENC_ASCII), ipaddr)){
+                    addr.type = AT_IPv6;
+                    addr.len  = 16;
+                    addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 16);
+                    proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, (const guint8 *)ipaddr);
+                }
+                else
+                    proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv6, tvb, offset, tmp);
+            }
+
+            if(rtpproxy_establish_conversation){
+                if (rtp_handle) {
+                    /* FIXME tell if isn't a video stream, and setup codec mapping */
+                    if (addr.len)
+                        rtp_add_address(pinfo, &addr, port, 0, "RTPproxy", pinfo->fd->num, 0, NULL);
+                }
+                if (rtcp_handle) {
+                    if (addr.len)
+                        rtcp_add_address(pinfo, &addr, port+1, 0, "RTPproxy", pinfo->fd->num);
+                }
+            }
+    }
+    return;
+}
+
 static int
 dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
@@ -539,9 +659,6 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
     conversation_t *conversation;
     rtpproxy_conv_info_t *rtpproxy_conv;
     gchar* cookie = NULL;
-    /* For RT(C)P setup */
-    address addr;
-    guint16 port;
     guint32 ipaddr[4]; /* Enough room for IPv4 or IPv6 */
     rtpproxy_info_t *rtpproxy_info = NULL;
     tvbuff_t *subtvb;
@@ -606,14 +723,8 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
         case 's':
             /* A specific case - long info answer */
             /* %COOKIE% sessions created %NUM0% active sessions: %NUM1% */
-            /* FIXME https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#information */
-            rtpproxy_add_tid(FALSE, tvb, pinfo, rtpproxy_tree, rtpproxy_conv, cookie);
             if ('e' == tvb_get_guint8(tvb, offset+1)){
-                col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
-                ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-
-                rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-                proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_status, tvb, offset, realsize - offset, ENC_ASCII | ENC_NA);
+                rtpproxy_add_reply(tvb, pinfo, rtpproxy_tree, rtpproxy_conv, cookie, 's', "Reply %s", rawstr, realsize, offset);
                 break;
             }
         case 'i':
@@ -781,6 +892,8 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
             }
             break;
         case 'e':
+            rtpproxy_add_reply(tvb, pinfo, rtpproxy_tree, rtpproxy_conv, cookie, 'e', "Error reply: %s", rawstr, realsize, offset);
+            break;
         case '0':
         case '1':
         case '2':
@@ -791,106 +904,7 @@ dissect_rtpproxy(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data
         case '7':
         case '8':
         case '9':
-            rtpproxy_info = rtpproxy_add_tid(FALSE, tvb, pinfo, rtpproxy_tree, rtpproxy_conv, cookie);
-            if (tmp == 'e')
-                col_add_fstr(pinfo->cinfo, COL_INFO, "Error reply: %s", rawstr);
-            else
-                col_add_fstr(pinfo->cinfo, COL_INFO, "Reply: %s", rawstr);
-
-            ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_reply, tvb, offset, -1, ENC_NA);
-            rtpproxy_tree = proto_item_add_subtree(ti, ett_rtpproxy_reply);
-
-            if(rtpproxy_info && rtpproxy_info->callid){
-                ti = proto_tree_add_string(rtpproxy_tree, hf_rtpproxy_callid, tvb, offset, 0, rtpproxy_info->callid);
-                PROTO_ITEM_SET_GENERATED(ti);
-            }
-
-            if (tmp == 'e'){
-                tmp = tvb_find_line_end(tvb, offset, -1, &new_offset, FALSE);
-                tmpstr = tvb_get_string_enc(wmem_packet_scope(), tvb, offset, tmp, ENC_ASCII);
-                ti = proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_error, tvb, offset, (gint)strlen(tmpstr), ENC_ASCII | ENC_NA);
-                proto_item_append_text(ti, " (%s)", str_to_str(tmpstr, errortypenames, "Unknown"));
-                break;
-            }
-
-            /* Check for a single '0' or '1' character followed by the end-of-line.
-             * These both are positive replies - either a 'positive reply' or a 'version ack'.
-             *
-             * https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#positive-reply
-             * https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#version-reply
-             */
-            if (((tmp == '0') || (tmp == '1')) && (realsize == offset + (gint)strlen("X"))){
-                proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_ok, tvb, offset, 1, ENC_ASCII | ENC_NA);
-                break;
-            }
-
-            /* Check for the VERSION_NUMBER string reply:
-             * https://github.com/sippy/rtpproxy/wiki/RTPP-%28RTPproxy-protocol%29-technical-specification#version-reply
-             *
-             * If a total size equals to a current offset + size of "YYYYMMDD" string
-             * then it's a version reply.
-             */
-            if (realsize == offset + (gint)strlen("YYYYMMDD")){
-                proto_tree_add_item(rtpproxy_tree, hf_rtpproxy_version_supported, tvb, offset, (guint32)strlen("YYYYMMDD"), ENC_ASCII | ENC_NA);
-                break;
-            }
-
-            /* Extract Port */
-            new_offset = tvb_find_guint8(tvb, offset, -1, ' ');
-            /* Convert port to unsigned 16-bit number */
-            port = (guint16) g_ascii_strtoull((gchar*)tvb_get_string_enc(wmem_packet_scope(), tvb, offset, new_offset - offset, ENC_ASCII), NULL, 10);
-            proto_tree_add_uint(rtpproxy_tree, hf_rtpproxy_port, tvb, offset, new_offset - offset, port);
-            /* Skip whitespace */
-            offset = tvb_skip_wsp(tvb, new_offset+1, -1);
-
-            /* Extract IP */
-            memset(&addr, 0, sizeof(address));
-
-            /* Try rtpengine bogus extension first. It appends 4 or
-             * 6 depending on type of the IP. See
-             * https://github.com/sipwise/rtpengine/blob/eea3256/daemon/call_interfaces.c#L74
-             * for further details */
-            tmp = tvb_find_guint8(tvb, offset, -1, ' ');
-            if(tmp == (guint)(-1)){
-                /* No extension - operate normally */
-                tmp = tvb_find_line_end(tvb, offset, -1, &new_offset, FALSE);
-            }
-            else {
-                tmp -= offset;
-            }
-
-            if (tvb_find_guint8(tvb, offset, -1, ':') == -1){
-                if (str_to_ip((char*)tvb_get_string_enc(wmem_packet_scope(), tvb, offset, tmp, ENC_ASCII), ipaddr)){
-                    addr.type = AT_IPv4;
-                    addr.len  = 4;
-                    addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 4);
-                    proto_tree_add_ipv4(rtpproxy_tree, hf_rtpproxy_ipv4, tvb, offset, tmp, ipaddr[0]);
-                }
-                else
-                    proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv4, tvb, offset, tmp);
-            }
-            else{
-                if (str_to_ip6((char*)tvb_get_string_enc(wmem_packet_scope(), tvb, offset, tmp, ENC_ASCII), ipaddr)){
-                    addr.type = AT_IPv6;
-                    addr.len  = 16;
-                    addr.data = wmem_memdup(wmem_packet_scope(), ipaddr, 16);
-                    proto_tree_add_ipv6(rtpproxy_tree, hf_rtpproxy_ipv6, tvb, offset, tmp, (const guint8 *)ipaddr);
-                }
-                else
-                    proto_tree_add_expert(rtpproxy_tree, pinfo, &ei_rtpproxy_bad_ipv6, tvb, offset, tmp);
-            }
-
-            if(rtpproxy_establish_conversation){
-                if (rtp_handle) {
-                    /* FIXME tell if isn't a video stream, and setup codec mapping */
-                    if (addr.len)
-                        rtp_add_address(pinfo, &addr, port, 0, "RTPproxy", pinfo->fd->num, 0, NULL);
-                }
-                if (rtcp_handle) {
-                    if (addr.len)
-                        rtcp_add_address(pinfo, &addr, port+1, 0, "RTPproxy", pinfo->fd->num);
-                }
-            }
+            rtpproxy_add_reply(tvb, pinfo, rtpproxy_tree, rtpproxy_conv, cookie, tmp, "Reply %s", rawstr, realsize, offset);
             break;
         default:
             break;
