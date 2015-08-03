@@ -487,13 +487,20 @@ DIAG_ON(cast-qual)
           /* Append only if this is a new interface */
           if (isnew) {
             g_array_append_val(idb_inf->interface_data, int_data);
+
+            /* Set fake interface Id in per file data */
+            in_files[i].interface_id = itf_id;
+            itf_id++;
+          }
+          else {
+            /* Set fake interface Id in per file data equal to the number of an interface found */
+            /* Note - we have to decrease j by 1 because it was incremented by
+             * 1 every 'for' iteration, including the last one */
+            in_files[i].interface_id = j - 1;
           }
         }
         g_free(idb_inf_merge_file);
 
-        /* Set fake interface Id in per file data */
-        in_files[i].interface_id = itf_id;
-        itf_id += itf_count;
       }
     } else {
       guint8 if_tsresol = 6;
