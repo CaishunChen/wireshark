@@ -1296,13 +1296,15 @@ cf_merge_files(char **out_filenamep, int in_file_count,
    * We need something similar when merging pcapng files possibly with an option to say
    * the same interface(s) used in all in files. SHBs comments should be merged together.
    */
-  if ((selected_frame_type == WTAP_ENCAP_PER_PACKET)&&(file_type == WTAP_FILE_TYPE_SUBTYPE_PCAP)) {
+  if (((selected_frame_type == WTAP_ENCAP_PER_PACKET) || (selected_frame_type == WTAP_ENCAP_ETHERNET))&&((file_type == WTAP_FILE_TYPE_SUBTYPE_PCAP)||(file_type == WTAP_FILE_TYPE_SUBTYPE_PCAPNG))) {
     /* Write output in pcapng format */
     wtapng_section_t            *shb_hdr;
     wtapng_iface_descriptions_t *idb_inf, *idb_inf_merge_file;
     wtapng_if_descr_t            int_data, *file_int_data;
     GString                     *comment_gstr;
     guint                        itf_count, itf_id = 0;
+    guint j = 0;
+    gint isnew = 0;
 
     fake_interface_ids = TRUE;
     /* Create SHB info */
@@ -1357,13 +1359,28 @@ cf_merge_files(char **out_filenamep, int in_file_count,
         int_data.num_stat_entries      = 0;          /* Number of ISB:s */
         int_data.interface_statistics  = NULL;
 
-        g_array_append_val(idb_inf->interface_data, int_data);
+        /* Check if it's a new interface (just compare by a name with already appended ones) */
+        for (j = 0, isnew = TRUE; j < idb_inf->interface_data->len && isnew; j++) {
+          wtapng_if_descr_t *tmpdescr = &g_array_index (idb_inf->interface_data, wtapng_if_descr_t, j);
+          isnew = g_strcmp0(tmpdescr->if_name, int_data.if_name);
+        }
+        /* Append only if this is a new interface */
+        if (isnew) {
+          g_array_append_val(idb_inf->interface_data, int_data);
+
+          /* Set fake interface Id in per file data */
+          in_files[i].interface_id = itf_id;
+          itf_id++;
+        }
+        else {
+          /* Set fake interface Id in per file data equal to the number of an interface found */
+          /* Note - we have to decrease j by 1 because it was incremented by
+           * 1 every 'for' iteration, including the last one */
+          fprintf(stderr, "REUSE %s %u\n", int_data.if_name, j - 1);
+          in_files[i].interface_id = j - 1;
+        }
       }
       g_free(idb_inf_merge_file);
-
-      /* Set fake interface Id in per file data */
-      in_files[i].interface_id = itf_id;
-      itf_id += itf_count;
     }
 
     pdh = wtap_dump_fdopen_ng(out_fd, file_type,
