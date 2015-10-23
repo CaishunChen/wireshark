@@ -33,6 +33,7 @@ AC_DEFUN([AM_PATH_WIRESHARK],[
 #include <gmodule.h>
 #include <epan/packet.h>
 #include <epan/prefs.h>
+#include <epan/epan.h>
 
 int 
 main()
@@ -40,7 +41,7 @@ main()
 {
 	int ws_major_version, ws_minor_version, ws_micro_version;
 	int major, minor, micro;
-	char **tmp_version;
+	char *tmp_version;
 
 	tmp_version = (char *) strdup("$min_wireshark_version");
 	major = 0;
@@ -76,6 +77,7 @@ main()
 #include <gmodule.h>
 #include <epan/packet.h>
 #include <epan/prefs.h>
+#include <epan/epan.h>
 ], [puts(epan_get_version());])], [WIRESHARK_VERSION=`./conftest$ac_exeext`],
 wireshark_found=no)
 		
